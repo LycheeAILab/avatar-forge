@@ -1,0 +1,20 @@
+{
+  "name": "avatar-forge",
+  "interface": {
+    "displayName": "Avatar Forge"
+  },
+  "plugins": [
+    {
+      "name": "avatar-forge",
+      "source": {
+        "source": "local",
+        "path": "./plugins/avatar-forge"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Creativity"
+    }
+  ]
+}

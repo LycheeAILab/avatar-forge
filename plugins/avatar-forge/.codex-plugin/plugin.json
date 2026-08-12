@@ -1,0 +1,29 @@
+{
+  "name": "avatar-forge",
+  "version": "1.0.0",
+  "description": "Create talking-avatar videos from public models or your own portrait and voice.",
+  "author": {
+    "name": "LycheeAILab",
+    "url": "https://lab.lycheeai.com.cn/"
+  },
+  "homepage": "https://github.com/LycheeAILab/avatar-forge",
+  "repository": "https://github.com/LycheeAILab/avatar-forge",
+  "license": "MIT",
+  "keywords": ["digital-human", "talking-avatar", "voice-cloning", "video"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Avatar Forge",
+    "shortDescription": "Create your own talking-avatar video.",
+    "longDescription": "Choose a public avatar or upload an authorized portrait and reference voice to create a personal talking-avatar video, then package it with HyperFrames or ChatCut.",
+    "developerName": "LycheeAILab",
+    "category": "Creativity",
+    "capabilities": ["Interactive", "Write"],
+    "websiteURL": "https://lab.lycheeai.com.cn/",
+    "defaultPrompt": [
+      "用公共数字人制作一条口播视频。",
+      "用我的图片和声音创建专属数字人。",
+      "生成数字人并用 HyperFrames 或 ChatCut 包装。"
+    ],
+    "brandColor": "#7257E8"
+  }
+}

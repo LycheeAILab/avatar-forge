@@ -8,33 +8,43 @@
   上传一张图片、一段声音和一份文案，即可生成自然开口的数字人视频。
 
   [![License: MIT](https://img.shields.io/badge/License-MIT-111827.svg)](LICENSE)
-  [![Agent Skill](https://img.shields.io/badge/Agent-Skill-7257E8.svg)](#安装)
+  [![Codex Plugin](https://img.shields.io/badge/Codex-Plugin-7257E8.svg)](#一句话安装)
 </div>
 
 ---
 
-Avatar Forge 是一个面向 AI Agent 的数字人视频 Skill。
-
-你可以从丰富的公共数字人形象中直接选择，也可以使用自己的图片和声音，快速创建专属数字人。只需告诉 Agent 你想说什么，剩下的交给 Avatar Forge。
+Avatar Forge 是一个面向 AI Agent 的数字人视频插件。你可以直接选择公共数字人，也可以使用自己的图片和声音创建专属数字人。
 
 ## 核心能力
 
 ### 丰富的公共模型
 
-无需准备人物素材，直接从公共数字人形象中挑选适合你的角色，快速生成产品介绍、知识分享、新闻播报等内容。
+无需准备人物素材，直接选择合适的公共数字人，用于产品介绍、知识分享、资讯播报等内容。
 
-### 克隆你的专属数字人
+### 创建你的专属数字人
 
-上传一张已获授权的人物图片和一段参考声音，即可生成拥有相似形象与音色的数字人视频。
+上传一张已获授权的人物图片、一段参考声音和一份口播文案，即可创建拥有相似形象与音色的数字人视频。
 
-- 一张人物图片
-- 一段参考声音
-- 一份口播文案
-- 一个会自然开口的专属数字人
+### 制作完整口播成片
 
-### 一句话完成口播视频
+与 [HyperFrames](https://github.com/HyperCrowdAI/hyperframes) 或 ChatCut 搭配，为数字人口播添加字幕、标题、素材画面、动态包装和镜头节奏。
 
-Avatar Forge 可以与 [HyperFrames](https://github.com/HyperCrowdAI/hyperframes) 或 ChatCut 搭配使用，在数字人口播的基础上继续添加字幕、标题、画面素材、动态包装与镜头节奏，完成适合社交媒体发布的口播成片。
+## 一句话安装
+
+在 Codex 桌面端新建任务并发送：
+
+> 阅读 https://raw.githubusercontent.com/LycheeAILab/avatar-forge/main/INSTALL.md，帮我安装 Avatar Forge 插件并创建一个新的数字人视频任务。
+
+Codex 会自动完成 Marketplace 添加、插件安装、安装验证，并为你打开第一个数字人视频任务。首次制作时会引导你完成 LycheeAILab 登录授权。
+
+## 手动安装
+
+```powershell
+codex plugin marketplace add https://github.com/LycheeAILab/avatar-forge.git --ref main
+codex plugin add avatar-forge@avatar-forge
+```
+
+安装后请新建 Codex 任务，让插件能力在新会话中加载。
 
 ## 适合用来做什么
 
@@ -45,33 +55,9 @@ Avatar Forge 可以与 [HyperFrames](https://github.com/HyperCrowdAI/hyperframes
 - 多语言数字人内容
 - 品牌 IP 与虚拟主播
 
-## 使用方式
+## 素材授权
 
-安装后，直接在 Codex 中描述你的需求即可：
-
-> 用这个人物和这段声音，生成一条介绍新产品的数字人口播视频。
-
-或者：
-
-> 从公共模型里选一个专业、亲和的主播，制作这份文案的口播视频，再用 HyperFrames 包装成竖屏短视频。
-
-Agent 会引导你准备所需素材并完成生成。
-
-## 安装
-
-```powershell
-git clone https://github.com/LycheeAILab/avatar-forge.git
-Copy-Item `
-  avatar-forge\skills\avatar-forge-pipeline `
-  "$env:USERPROFILE\.codex\skills\avatar-forge-pipeline" `
-  -Recurse
-```
-
-重新打开一个 Codex 任务后，`avatar-forge-pipeline` 即可被自动发现。首次使用时，Skill 会引导你完成 LycheeAILab 登录授权。
-
-## 关于素材授权
-
-请仅上传你拥有合法使用权的人物图片、声音和文案，并在发布生成内容时遵守适用的法律、平台规则与内容政策。
+请仅上传你拥有合法使用权的人物图片、声音和文案，并遵守适用的法律、平台规则与内容政策。提交可能产生费用的生成任务前，Agent 应获得你的确认。
 
 ## License
 
