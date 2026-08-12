@@ -137,6 +137,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--force-login", action="store_true")
     parser.add_argument("--voice-only", action="store_true", help="Clone the reference voice and save a WAV without generating an avatar")
     parser.add_argument("--avatar-only", action="store_true", help="Generate an avatar from an image and an existing WAV/MP3")
+    parser.add_argument("--template-only", action="store_true", help="Generate only the RunningHub template video")
+    parser.add_argument("--clone-only", action="store_true", help="Clone a template video into a reusable digital human")
+    parser.add_argument("--infer-only", action="store_true", help="Run a ready digital human with an existing audio file")
+    parser.add_argument("--video", type=Path)
+    parser.add_argument("--asset-id")
+    parser.add_argument("--player-id")
     return parser.parse_args()
 
 
@@ -159,14 +165,35 @@ def main() -> int:
         args.output.write_bytes(response.content)
         print(f"Saved cloned voice: {args.output}")
         return 0
-    if args.avatar_only:
+    if args.clone_only:
+        if args.video is None or not args.video.is_file():
+            raise PipelineError("--clone-only requires --video")
+        with args.video.open("rb") as video:
+            response = session.post(f"{base_url}/api/avatar-forge/avatar/clone", files={"video": (args.video.name, video, "video/mp4")}, data={"assetId": args.asset_id or ""}, timeout=300)
+        if not response.ok:
+            raise PipelineError(f"Digital-human clone failed (HTTP {response.status_code}): {response.text[:300]}")
+        data = response.json()
+        print(json.dumps(data, ensure_ascii=False))
+        return 0
+    if args.infer_only:
+        if args.audio is None or not args.audio.is_file() or not args.asset_id or not args.player_id:
+            raise PipelineError("--infer-only requires --audio, --asset-id and --player-id")
+        with args.audio.open("rb") as audio:
+            response = session.post(f"{base_url}/api/avatar-forge/avatar/infer", files={"audio": (args.audio.name, audio, media_type(args.audio))}, data={"assetId": args.asset_id, "playerId": args.player_id}, timeout=300)
+        if not response.ok:
+            raise PipelineError(f"Digital-human inference failed (HTTP {response.status_code}): {response.text[:300]}")
+        data = response.json()
+        print(json.dumps(data, ensure_ascii=False))
+        return 0
+    if args.avatar_only or args.template_only:
         if args.image is None or not args.image.is_file() or args.audio is None or not args.audio.is_file():
             raise PipelineError("--avatar-only requires --image and --audio")
         with args.image.open("rb") as image, args.audio.open("rb") as audio:
-            response = session.post(f"{base_url}/api/avatar-forge/avatar", files={"image": (args.image.name, image, media_type(args.image)), "audio": (args.audio.name, audio, media_type(args.audio))}, timeout=300)
+            response = session.post(f"{base_url}/api/avatar-forge/template", files={"image": (args.image.name, image, media_type(args.image)), "audio": (args.audio.name, audio, media_type(args.audio))}, timeout=300)
         if not response.ok:
             raise PipelineError(f"Avatar submission failed (HTTP {response.status_code}): {response.text[:300]}")
-        task_id = str(response.json().get("taskId", ""))
+        generated_payload = response.json()
+        task_id = str(generated_payload.get("taskId", ""))
         if not task_id:
             raise PipelineError("Avatar generation returned no task ID")
         print(f"Submitted task {task_id}", flush=True)
@@ -190,7 +217,8 @@ def main() -> int:
             )
         if not response.ok:
             raise PipelineError(f"Avatar Forge submission failed (HTTP {response.status_code}): {response.text[:300]}")
-        task_id = str(response.json().get("taskId", ""))
+        generated_payload = response.json()
+        task_id = str(generated_payload.get("taskId", ""))
         if not task_id:
             raise PipelineError("Avatar Forge returned no task ID")
         print(f"Submitted task {task_id}", flush=True)
@@ -214,7 +242,58 @@ def main() -> int:
     result = next((item for item in data.get("results", []) if str(item.get("outputType", "")).lower() == "mp4"), None)
     if not result or not result.get("url"):
         raise PipelineError("Successful task returned no MP4")
-    raw_only = args.skip_hyperframes or args.avatar_only
+    if not (args.avatar_only or args.template_only or args.resume_task_id):
+        template_path = args.output.with_name(f"{args.output.stem}-template.mp4")
+        with session.get(result["url"], stream=True, timeout=300) as download:
+            download.raise_for_status()
+            template_path.parent.mkdir(parents=True, exist_ok=True)
+            with template_path.open("wb") as handle:
+                for chunk in download.iter_content(1024 * 1024):
+                    if chunk:
+                        handle.write(chunk)
+        with template_path.open("rb") as video:
+            clone = session.post(f"{base_url}/api/avatar-forge/avatar/clone", files={"video": (template_path.name, video, "video/mp4")}, data={"assetId": generated_payload.get("assetId", "")}, timeout=300)
+        if not clone.ok:
+            raise PipelineError(f"Digital-human clone failed (HTTP {clone.status_code}): {clone.text[:300]}")
+        clone_data = clone.json()
+        clone_request = clone_data["requestId"]
+        while True:
+            status_response = session.get(f"{base_url}/api/avatar-forge/digital-task/{clone_request}", timeout=60)
+            status_response.raise_for_status()
+            clone_result = status_response.json()
+            if clone_result.get("event_type") == "INFER.SUCCESS":
+                break
+            if clone_result.get("event_type") == "INFER.FAIL":
+                raise PipelineError(f"Digital-human clone failed: {clone_result}")
+            time.sleep(args.poll_seconds)
+        player_id = clone_result.get("body", {}).get("player_id")
+        if not player_id:
+            raise PipelineError("Digital-human clone returned no player_id")
+        audio_url = generated_payload.get("audioUrl")
+        if not audio_url:
+            raise PipelineError("Complete workflow returned no generated audio URL")
+        audio_path = args.output.with_name(f"{args.output.stem}-speech.wav")
+        audio_download = session.get(audio_url, timeout=300)
+        audio_download.raise_for_status()
+        audio_path.write_bytes(audio_download.content)
+        with audio_path.open("rb") as audio:
+            infer = session.post(f"{base_url}/api/avatar-forge/avatar/infer", files={"audio": (audio_path.name, audio, "audio/wav")}, data={"assetId": generated_payload["assetId"], "playerId": player_id, "audioGenerationId": generated_payload.get("audioGenerationId", "")}, timeout=300)
+        if not infer.ok:
+            raise PipelineError(f"Digital-human inference failed (HTTP {infer.status_code}): {infer.text[:300]}")
+        infer_request = infer.json()["requestId"]
+        while True:
+            status_response = session.get(f"{base_url}/api/avatar-forge/digital-task/{infer_request}", timeout=60)
+            status_response.raise_for_status()
+            infer_result = status_response.json()
+            if infer_result.get("event_type") == "INFER.SUCCESS":
+                break
+            if infer_result.get("event_type") == "INFER.FAIL":
+                raise PipelineError(f"Digital-human inference failed: {infer_result}")
+            time.sleep(args.poll_seconds)
+        result = {"url": infer_result.get("body", {}).get("data"), "outputType": "mp4"}
+        if not result["url"]:
+            raise PipelineError("Digital-human inference returned no video")
+    raw_only = args.skip_hyperframes or args.avatar_only or args.template_only
     raw_output = args.output if raw_only else (args.raw_output or args.output.with_name(f"{args.output.stem}-raw.mp4"))
     raw_output.parent.mkdir(parents=True, exist_ok=True)
     with session.get(result["url"], stream=True, timeout=300) as download:
