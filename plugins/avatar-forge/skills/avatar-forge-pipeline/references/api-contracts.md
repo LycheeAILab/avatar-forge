@@ -20,6 +20,16 @@ The Skill stores only the revocable user API Key. MiMo, RunningHub, and Tencent 
 
 ## Avatar Forge
 
+- `POST /api/avatar-forge/voice`
+  - Multipart: `voice`, `script`
+  - Returns JSON metadata and a signed WAV URL.
+- `POST /api/avatar-forge/voice/file`
+  - Multipart: `voice`, `script`
+  - Returns the generated WAV directly.
+- `POST /api/avatar-forge/avatar`
+  - Multipart: `image`, `audio`
+  - Returns `taskId`, `status`.
+
 - `POST /api/avatar-forge/generate`
   - Header: `Authorization: Bearer <userApiKey>`
   - Multipart: `image`, `voice`, `script`

@@ -25,6 +25,17 @@ class PipelineError(RuntimeError):
     pass
 
 
+def media_type(path: Path) -> str:
+    return {
+        ".wav": "audio/wav",
+        ".mp3": "audio/mpeg",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png",
+        ".webp": "image/webp",
+    }.get(path.suffix.lower(), "application/octet-stream")
+
+
 def token_path() -> Path:
     root = Path(os.environ.get("LOCALAPPDATA", Path.home() / ".config"))
     return root / "LycheeAILab" / "avatar-forge-token.json"
@@ -113,6 +124,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--base-url", default=os.environ.get("LYCHEE_LAB_URL", DEFAULT_BASE_URL))
     parser.add_argument("--image", type=Path)
     parser.add_argument("--voice", type=Path)
+    parser.add_argument("--audio", type=Path)
     parser.add_argument("--script-file", type=Path)
     parser.add_argument("--resume-task-id")
     parser.add_argument("--output", type=Path, default=Path("avatar-forge-result.mp4"))
@@ -123,6 +135,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--timeout-seconds", type=int, default=3600)
     parser.add_argument("--login-only", action="store_true")
     parser.add_argument("--force-login", action="store_true")
+    parser.add_argument("--voice-only", action="store_true", help="Clone the reference voice and save a WAV without generating an avatar")
+    parser.add_argument("--avatar-only", action="store_true", help="Generate an avatar from an image and an existing WAV/MP3")
     return parser.parse_args()
 
 
@@ -133,11 +147,33 @@ def main() -> int:
     if args.login_only:
         print("LycheeAILab authentication succeeded")
         return 0
-    if not args.skip_hyperframes and (args.script_file is None or not args.script_file.is_file()):
-        raise PipelineError("A script file is required to render the HyperFrames mouthpiece")
-
-    if args.resume_task_id:
+    if args.voice_only:
+        if args.voice is None or not args.voice.is_file() or args.script_file is None or not args.script_file.is_file():
+            raise PipelineError("--voice-only requires --voice and --script-file")
+        script = args.script_file.read_text(encoding="utf-8").strip()
+        with args.voice.open("rb") as voice:
+            response = session.post(f"{base_url}/api/avatar-forge/voice/file", files={"voice": (args.voice.name, voice, media_type(args.voice))}, data={"script": script}, timeout=300)
+        if not response.ok:
+            raise PipelineError(f"Voice cloning failed (HTTP {response.status_code}): {response.text[:300]}")
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_bytes(response.content)
+        print(f"Saved cloned voice: {args.output}")
+        return 0
+    if args.avatar_only:
+        if args.image is None or not args.image.is_file() or args.audio is None or not args.audio.is_file():
+            raise PipelineError("--avatar-only requires --image and --audio")
+        with args.image.open("rb") as image, args.audio.open("rb") as audio:
+            response = session.post(f"{base_url}/api/avatar-forge/avatar", files={"image": (args.image.name, image, media_type(args.image)), "audio": (args.audio.name, audio, media_type(args.audio))}, timeout=300)
+        if not response.ok:
+            raise PipelineError(f"Avatar submission failed (HTTP {response.status_code}): {response.text[:300]}")
+        task_id = str(response.json().get("taskId", ""))
+        if not task_id:
+            raise PipelineError("Avatar generation returned no task ID")
+        print(f"Submitted task {task_id}", flush=True)
+    elif args.resume_task_id:
         task_id = args.resume_task_id
+    elif not args.skip_hyperframes and (args.script_file is None or not args.script_file.is_file()):
+        raise PipelineError("A script file is required to render the HyperFrames mouthpiece")
     else:
         for path in (args.image, args.voice, args.script_file):
             if path is None or not path.is_file():
@@ -148,7 +184,7 @@ def main() -> int:
         with args.image.open("rb") as image, args.voice.open("rb") as voice:
             response = session.post(
                 f"{base_url}/api/avatar-forge/generate",
-                files={"image": (args.image.name, image), "voice": (args.voice.name, voice)},
+                files={"image": (args.image.name, image, media_type(args.image)), "voice": (args.voice.name, voice, media_type(args.voice))},
                 data={"script": script},
                 timeout=300,
             )
@@ -178,7 +214,8 @@ def main() -> int:
     result = next((item for item in data.get("results", []) if str(item.get("outputType", "")).lower() == "mp4"), None)
     if not result or not result.get("url"):
         raise PipelineError("Successful task returned no MP4")
-    raw_output = args.output if args.skip_hyperframes else (args.raw_output or args.output.with_name(f"{args.output.stem}-raw.mp4"))
+    raw_only = args.skip_hyperframes or args.avatar_only
+    raw_output = args.output if raw_only else (args.raw_output or args.output.with_name(f"{args.output.stem}-raw.mp4"))
     raw_output.parent.mkdir(parents=True, exist_ok=True)
     with session.get(result["url"], stream=True, timeout=300) as download:
         download.raise_for_status()
@@ -187,7 +224,7 @@ def main() -> int:
                 if chunk:
                     handle.write(chunk)
     print(f"Saved raw digital human: {raw_output}")
-    if not args.skip_hyperframes:
+    if not raw_only:
         renderer = Path(__file__).with_name("render_mouthpiece.py")
         command = [sys.executable, str(renderer), "--video", str(raw_output), "--script-file", str(args.script_file), "--output", str(args.output), "--title", args.template_title]
         try:
