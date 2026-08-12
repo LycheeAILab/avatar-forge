@@ -1,0 +1,4 @@
+interface:
+  display_name: "Avatar Forge"
+  short_description: "Create a fully packaged talking-avatar video"
+  default_prompt: "Use $avatar-forge-pipeline to turn my portrait, reference voice, and script into a masked talking-avatar video."

@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+.env
+.env.*
+output/
+outputs/
+renders/
+*.wav
+*.mp3
+*.mp4
+*.webm
+*.mov
+*.pem
+*.key
+*.crt
+*.csr
+avatar-forge-token.json
