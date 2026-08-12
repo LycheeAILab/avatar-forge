@@ -1,18 +1,52 @@
 ---
 name: avatar-forge-pipeline
-description: Create a finished talking-avatar video from a portrait, reference voice, and script. Use when Codex should authenticate with LycheeAILab, clone and synthesize speech with MiMo, drive a digital human with InfiniteTalk, resume a RunningHub task, or package the result with the bundled HyperFrames masked-video template.
+description: Create or edit digital-human media with composable Avatar Forge capabilities. Use when Codex should choose a public avatar, animate an authorized portrait, match lip movement for an existing video, clone or synthesize an authorized voice, resume a generation task, or combine selected stages into a packaged talking-avatar video with HyperFrames or ChatCut.
 ---
 
-# Avatar Forge Pipeline
+# Avatar Forge
 
-## Run the complete workflow
+## Compose only what the user needs
 
-1. Confirm that the user is authorized to use the portrait, reference voice, and script.
-2. Require three inputs: one portrait image, one WAV/MP3 reference voice, and a UTF-8 script file.
-3. Run the login check. If no valid local Lab API Key exists, let the helper open the LycheeAILab login/registration page. Never ask the user for provider credentials.
-4. Submit the three inputs to the protected Lab gateway. The gateway performs MiMo voice cloning and speech synthesis, then sends the portrait and generated speech to InfiniteTalk on RunningHub.
-5. Poll the returned task ID until `SUCCESS` or `FAILED`. Resume the same task after interruption; never create a duplicate paid task.
-6. Download the raw digital-human MP4 and render it through the bundled HyperFrames mouthpiece template. Return the packaged MP4 and retain the raw MP4 beside it.
+Do not force every request through the full portrait + voice + script pipeline. First identify the requested outcome and select only the relevant modules:
+
+1. **Public avatar** — choose a suitable public digital-human model and generate speech-driven video.
+2. **Portrait animation** — turn one authorized portrait plus speech audio into a digital-human video.
+3. **Existing-video lip sync** — match an existing authorized video to supplied or synthesized speech; preserve the source video unless the user requests other edits.
+4. **Voice clone / speech synthesis** — use one authorized reference voice and a script to produce speech audio without requiring an image or video.
+5. **Video packaging** — package an existing digital-human video with HyperFrames or ChatCut; do not regenerate the avatar.
+6. **Complete creation** — combine only the modules needed for an end-to-end result.
+
+Ask for missing inputs module by module. Never require a portrait for voice-only work, a reference voice when the user already has usable speech audio, or regeneration when the user already has a video.
+
+Before a paid or irreversible external submission, summarize the selected modules, inputs, expected outputs, and possible charge, then obtain the user's confirmation.
+
+## Mandatory portrait check
+
+Before accepting or submitting any portrait-driven task, show this notice and obtain confirmation:
+
+> 请确认人物脸部清晰、没有遮挡、完整露出，且人物在画面中的比例适中。模糊、遮脸、面部超出画面或人物过大/过小都会影响数字人效果。
+
+Inspect the image when possible. Confirm all of the following:
+
+- exactly one intended primary person;
+- face is sharp enough to identify facial features;
+- eyes, nose, mouth, jawline, and full face are visible;
+- no hands, hair, masks, glasses glare, objects, or crop obscure important facial areas;
+- head and body are not cut off in a way that conflicts with the requested framing;
+- subject scale is moderate, with useful space around the head and body;
+- image is not severely tilted, distorted, underexposed, or overexposed.
+
+If any item is doubtful, explain the specific issue and ask for a better image. Do not submit merely because a file exists. If inspection is unavailable, ask the user to explicitly confirm the notice.
+
+## Authenticate safely
+
+Run `python scripts/run_pipeline.py --login-only` when authentication is needed. The browser login occurs on `https://lab.lycheeai.com.cn`; never ask the user for provider credentials.
+
+Use only documented LycheeAILab endpoints. Read [references/api-contracts.md](references/api-contracts.md) before making a request. If a requested standalone module is not exposed by the installed client contract, do not invent an endpoint or silently run the full pipeline. Explain the limitation and use the current LycheeAILab product entry that exposes that capability, or ask the user whether to use an available composition.
+
+## Execute and resume
+
+For the currently documented complete creation route:
 
 ```powershell
 python scripts/run_pipeline.py `
@@ -22,28 +56,18 @@ python scripts/run_pipeline.py `
   --output output/final-mouthpiece.mp4
 ```
 
-Use `--skip-hyperframes` only when the user explicitly wants the raw InfiniteTalk result. When resuming, pass both `--resume-task-id TASK_ID` and the original `--script-file` so the final captions can be rebuilt without another paid submission.
+Use `--skip-hyperframes` for a raw digital-human result. Resume an interrupted paid task with its original task ID instead of submitting a duplicate.
 
-## Authenticate safely
-
-Avatar Forge is an Agent Skill, not a web application. Run:
-
-```powershell
-python scripts/run_pipeline.py --login-only
-```
-
-The browser login occurs on `https://lab.lycheeai.com.cn`. A randomized `127.0.0.1` callback receives only the signed-in user's revocable `lych_live_...` API Key. MiMo, RunningHub, HyperFrames hosting, and Tencent COS credentials remain in the encrypted server-side credential library and must never be returned, logged, or committed.
+For packaging only, use `scripts/render_mouthpiece.py` with the user's existing video and script; do not invoke avatar generation.
 
 ## Load references when needed
 
-- Read [references/workflow.md](references/workflow.md) before changing stage order, inputs, or output behavior.
-- Read [references/api-contracts.md](references/api-contracts.md) before changing Lab request or response handling.
-- Read [references/verification-gates.md](references/verification-gates.md) before claiming that a generated video passed validation.
+- Read [references/workflow.md](references/workflow.md) to select and compose modules.
+- Read [references/api-contracts.md](references/api-contracts.md) before calling LycheeAILab.
+- Read [references/verification-gates.md](references/verification-gates.md) before claiming output quality.
 
-## Verify without spending
+## Safety and publishing
 
-- `GET /api/skill-auth/me` must return 200 for a valid user API Key.
-- An unauthenticated Avatar Forge request must return 401.
-- Validate the bundled template and scripts without submitting a real MiMo or RunningHub job.
+- Confirm authorization for every portrait, video, voice, and script.
+- Never expose or commit API keys, provider credentials, user media, task payloads, or signed URLs.
 - Run `python scripts/scan_secrets.py .` before publishing.
-- Never include portraits, voices, generated videos, API Keys, signed URLs, task payloads, or provider credentials in the open-source package.

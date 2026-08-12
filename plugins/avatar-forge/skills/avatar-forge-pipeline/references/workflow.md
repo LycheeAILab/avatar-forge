@@ -1,28 +1,35 @@
-# Workflow contract
+# Composable workflow contract
 
-## Inputs
+## Select modules from the requested outcome
 
-- Portrait: JPG, PNG, or WebP depicting one authorized person.
-- Reference voice: WAV or MP3 containing one authorized speaker with low background noise.
-- Script: non-empty UTF-8 text to be spoken by the avatar.
-- Optional presentation title for the bundled HyperFrames template.
+| User outcome | Required input | Optional next module |
+| --- | --- | --- |
+| Use a public avatar | public model choice, speech audio or script | packaging |
+| Animate a portrait | approved portrait, speech audio | packaging |
+| Lip-sync an existing video | approved video, speech audio | packaging |
+| Clone/synthesize a voice | approved reference voice, script | portrait animation, video lip sync, or audio delivery |
+| Package an existing video | video, script/captions, style direction | none |
+| Full talking-avatar video | inputs required by the selected modules | packaging |
 
-## Stages
+Do not collect inputs for modules the user did not select.
 
-1. **Lab authorization** — exchange the user's signed-in Lab session for the user's revocable API Key through the loopback authorization flow.
-2. **Voice cloning and speech synthesis** — the Lab gateway sends the reference voice and script to MiMo and obtains synthesized speech in the cloned voice.
-3. **Digital-human generation** — the Lab gateway uploads the portrait and synthesized speech to the configured InfiniteTalk workflow on RunningHub and returns a task ID.
-4. **Durable persistence** — the Lab gateway stores successful provider output in private Tencent COS and returns a short-lived signed result URL.
-5. **Local presentation render** — the Skill downloads the raw MP4 and uses the bundled HyperFrames template to place the speaker in a visual mask, add script-derived captions and render the finished mouthpiece MP4.
+## Portrait preflight gate
 
-Do not reorder stages 2 and 3: InfiniteTalk requires the synthesized speech before it can drive the portrait.
+Before every portrait animation submission:
 
-## Outputs
+1. Show the Chinese quality notice from `SKILL.md`.
+2. Inspect face clarity, complete visibility, occlusion, crop, exposure, tilt, and subject scale.
+3. Record either a pass or a specific rejection reason.
+4. Obtain user confirmation before a potentially charged submission.
 
-- `*-raw.mp4`: the unmodified digital-human video returned by the Lab gateway.
-- The requested `--output`: the final HyperFrames-packaged mouthpiece video.
-- The task ID printed to stdout so interrupted jobs can be resumed.
+## Composition rules
 
-## Open-source boundary
+- Voice synthesis must precede animation or lip sync only when the user does not already have final speech audio.
+- Existing video must bypass portrait generation.
+- Packaging must accept an existing result and must not trigger regeneration.
+- Save task IDs and resume interrupted paid jobs instead of duplicating them.
+- Preserve intermediate audio and raw video when they are useful to the user.
 
-The repository includes orchestration code, the Lab authentication client, API contracts, validation scripts, and the reusable HyperFrames template. It excludes provider credentials, the server-side credential vault, user API Keys, production data, validation portraits/voices, and generated media.
+## Current client boundary
+
+The bundled CLI currently documents the protected complete-creation route and local HyperFrames packaging. Standalone capabilities may be available through LycheeAILab product surfaces before separate public API routes are added. Never infer endpoint names. Consult `api-contracts.md`, and surface the boundary honestly.

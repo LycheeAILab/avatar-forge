@@ -40,7 +40,7 @@ The result must show `avatar-forge@avatar-forge` as installed and enabled. Do no
 Newly installed plugin skills are available only in a new Codex task. Create and open a new task yourself, preserving the current project context when possible, with this Chinese initial prompt:
 
 ```text
-Avatar Forge 插件已经安装好了。请先引导我完成 LycheeAILab 登录授权，然后帮我创建第一个数字人视频。先介绍三种能力：从丰富的公共数字人中选择角色；上传一张已授权的人物图片和一段参考声音来创建专属数字人；将生成结果搭配 HyperFrames 或 ChatCut 制作带字幕、动态包装和素材画面的口播成片。然后问我是想使用公共模型还是创建自己的数字人，并逐步询问口播文案和成片需求。未经我确认，不要提交可能产生费用的生成任务。
+Avatar Forge 插件已经安装好了。请先引导我完成 LycheeAILab 登录授权，然后问我这次只需要哪些能力：选择公共数字人、用图片生成数字人、给已有视频匹配口型、单独克隆声音，或用 HyperFrames / ChatCut 包装口播成片。不要强迫我执行完整流水线，只收集所选能力需要的素材。如果需要上传人物图片，先提示并确认：人物脸部清晰、没有遮挡、完整露出且人物比例适中，否则会影响效果。未经我确认，不要提交可能产生费用的生成任务。
 ```
 
 Use the host's task creation and navigation tools. Setup is complete only when the plugin is verified and the new task contains this prompt.
