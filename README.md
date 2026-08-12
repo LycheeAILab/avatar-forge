@@ -62,7 +62,7 @@ flowchart LR
 克隆本仓库后，将 Skill 目录复制到 Codex 的个人 Skill 目录：
 
 ```powershell
-git clone <YOUR_REPOSITORY_URL> avatar-forge-skill
+git clone https://github.com/LycheeAILab/avatar-forge.git avatar-forge-skill
 Copy-Item `
   avatar-forge-skill\skills\avatar-forge-pipeline `
   "$env:USERPROFILE\.codex\skills\avatar-forge-pipeline" `
