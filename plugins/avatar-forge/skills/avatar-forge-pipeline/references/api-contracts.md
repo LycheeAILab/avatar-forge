@@ -4,47 +4,44 @@ Base URL: `https://lab.lycheeai.com.cn`
 
 ## Authentication
 
-- `POST /api/skill-auth/login`
-  - JSON: `username`, `password`
-  - Response: `accessToken`, `tokenType`, `expiresIn`
-- `POST /api/skill-auth/exchange`
-  - Requires an existing same-origin LycheeAILab login cookie.
-  - Response: the signed-in user's `apiKey`, its prefix, and basic user metadata.
-  - The authorization page sends the key by POST to a randomized loopback callback. Never put the key in a URL or log it.
-- `GET /api/skill-auth/me`
-  - Header: `Authorization: Bearer <userApiKey>`
-- `POST /api/skill-auth/logout`
-  - Header: `Authorization: Bearer <accessToken>`
+- `POST /api/skill-auth/exchange`: exchange a same-origin Lab browser session for the signed-in user's API Key.
+- `GET /api/skill-auth/me`: validate `Authorization: Bearer <userApiKey>`.
 
-The Skill stores only the revocable user API Key. MiMo, RunningHub, and Tencent COS credentials remain server-side.
+The Skill stores only the revocable user API Key. Provider credentials remain server-side.
 
-## Avatar Forge
+## Internal template — only allowed RunningHub boundary
 
-- `POST /api/avatar-forge/voice`
-  - Multipart: `voice`, `script`
-  - Returns JSON metadata and a signed WAV URL.
-- `POST /api/avatar-forge/voice/file`
-  - Multipart: `voice`, `script`
-  - Returns the generated WAV directly.
 - `POST /api/avatar-forge/template`
-  - Multipart: `image`, `audio`
-  - Returns `assetId`, `taskId`, `status`.
+  - Multipart: `image`, `audio`.
+  - Returns internal `assetId`, `taskId`, `status`.
+- `GET /api/avatar-forge/task/:taskId`
+  - Poll until `SUCCESS` or `FAILED`.
+  - The returned MP4 is an internal template only. Never return it as the final output.
+
+Do not use the legacy `/api/avatar-forge/generate` route in the Skill. Explicit stage calls are required for correct recovery and final-output semantics.
+
+## MiMo target speech
+
+- `POST /api/avatar-forge/voice/file`
+  - Multipart: `voice`, `script`.
+  - Returns WAV bytes.
+  - A single server call accepts at most 500 characters; split complete scripts safely and concatenate every chunk.
+
+## Fast clone — never RunningHub
+
 - `POST /api/avatar-forge/avatar/clone`
-  - Multipart: `video`, optional `assetId`
-  - Returns `assetId`, `requestId`.
+  - Multipart: internal template `video`, `assetId`.
+  - Server calls Lychee digital-human `v2clone`.
+  - Returns `requestId`; poll it with `/digital-task/:requestId` until it returns `player_id`.
+
+## Zeroshot final inference — never RunningHub
+
 - `POST /api/avatar-forge/avatar/infer`
-  - Multipart: `audio`, `assetId`, `playerId`
+  - Multipart: target `audio`, `assetId`, `playerId`.
+  - Server calls Lychee digital-human `zeroshot`.
   - Returns `inferenceId`, `requestId`.
 - `GET /api/avatar-forge/digital-task/:requestId`
   - Poll until `INFER.SUCCESS` or `INFER.FAIL`.
+  - For inference success, `body.data` is the only normal user-facing final video URL.
 
-- `POST /api/avatar-forge/generate`
-  - Header: `Authorization: Bearer <userApiKey>`
-  - Multipart: `image`, `voice`, `script`
-  - Response: `taskId`, `status`
-- `GET /api/avatar-forge/task/:taskId`
-  - Header: `Authorization: Bearer <userApiKey>`
-  - Poll until `SUCCESS` or `FAILED`
-  - On success, use the returned signed MP4 URL immediately.
-
-Never call provider APIs directly from the Skill and never return provider keys from the Lab API.
+Never return provider credentials, internal task IDs, signed internal template URLs, or internal template media to the user.

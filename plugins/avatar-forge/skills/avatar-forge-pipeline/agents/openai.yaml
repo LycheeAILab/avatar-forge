@@ -1,4 +1,4 @@
 interface:
   display_name: "Avatar Forge"
-  short_description: "Compose avatar, lip-sync, voice, and video tasks"
-  default_prompt: "Use $avatar-forge-pipeline to choose only the digital-human capabilities I need and guide me through the required inputs."
+  short_description: "Create a final zeroshot talking-avatar video"
+  default_prompt: "Use $avatar-forge-pipeline to create my final talking-avatar video and return only the zeroshot MP4, never an internal template."

@@ -1,9 +1,0 @@
-{
-  "name": "avatar-forge-mouthpiece-render",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "check": "npx --yes hyperframes@0.7.105 check",
-    "render": "npx --yes hyperframes@0.7.105 render"
-  }
-}
