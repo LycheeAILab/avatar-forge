@@ -6,6 +6,7 @@ output/
 outputs/
 renders/
 *.wav
+!plugins/avatar-forge/skills/avatar-forge-pipeline/assets/template-driver.wav
 *.mp3
 *.mp4
 *.webm

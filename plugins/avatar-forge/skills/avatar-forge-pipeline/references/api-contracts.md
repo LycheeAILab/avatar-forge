@@ -12,7 +12,8 @@ The Skill stores only the revocable user API Key. Provider credentials remain se
 ## Internal template — only allowed RunningHub boundary
 
 - `POST /api/avatar-forge/template`
-  - Multipart: `image`, `audio`.
+  - Multipart: user-authorized `image`, bundled fixed `assets/template-driver.wav` as `audio`.
+  - Never send user script text, reference voice, finished target audio, or MiMo output to this endpoint.
   - Returns internal `assetId`, `taskId`, `status`.
 - `GET /api/avatar-forge/task/:taskId`
   - Poll until `SUCCESS` or `FAILED`.

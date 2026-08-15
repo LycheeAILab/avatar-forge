@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+from hashlib import sha256
 import sys
 import tempfile
 from pathlib import Path
@@ -47,10 +48,17 @@ class FakeResponse:
 class FakeSession:
     def __init__(self):
         self.posts: list[str] = []
+        self.template_audio_name: str | None = None
+        self.template_audio_sha256: str | None = None
 
-    def post(self, url: str, **_kwargs):
+    def post(self, url: str, **kwargs):
         self.posts.append(url)
         if url.endswith("/api/avatar-forge/template"):
+            audio_name, audio_source, _media_type = kwargs["files"]["audio"]
+            self.template_audio_name = audio_name
+            position = audio_source.tell()
+            self.template_audio_sha256 = sha256(audio_source.read()).hexdigest()
+            audio_source.seek(position)
             return FakeResponse(payload={"assetId": "asset-1", "taskId": "template-1"})
         if url.endswith("/api/avatar-forge/voice/file"):
             return FakeResponse(content=b"MIMO_TARGET_AUDIO")
@@ -79,12 +87,10 @@ def main() -> int:
         root = Path(directory)
         image = root / "portrait.png"
         voice = root / "voice.wav"
-        driver = root / "driver.wav"
         script = root / "script.txt"
         output = root / "result.mp4"
         image.write_bytes(b"IMAGE")
         voice.write_bytes(b"VOICE")
-        driver.write_bytes(b"DEDICATED_TEMPLATE_DRIVER")
         script.write_text("这是一次不产生真实费用的流程测试。", encoding="utf-8")
 
         fake = FakeSession()
@@ -97,7 +103,6 @@ def main() -> int:
                 "--base-url", "https://lab.test",
                 "--image", str(image),
                 "--voice", str(voice),
-                "--driver-audio", str(driver),
                 "--script-file", str(script),
                 "--output", str(output),
                 "--poll-seconds", "0",
@@ -116,6 +121,8 @@ def main() -> int:
         assert result == 0
         assert fake.posts == expected_posts, fake.posts
         assert output.read_bytes() == b"ZEROSHOT_FINAL_ONLY"
+        assert fake.template_audio_name == "template-driver.wav"
+        assert fake.template_audio_sha256 == PIPELINE.FIXED_TEMPLATE_DRIVER_SHA256
         assert not (root / ".avatar-forge" / "result" / "internal-template.mp4").exists()
         assert all("/generate" not in url for url in fake.posts)
 
@@ -127,7 +134,6 @@ def main() -> int:
                 "--base-url", "https://lab.test",
                 "--image", str(image),
                 "--voice", str(voice),
-                "--driver-audio", str(driver),
                 "--script-file", str(script),
                 "--output", str(output),
                 "--poll-seconds", "0",

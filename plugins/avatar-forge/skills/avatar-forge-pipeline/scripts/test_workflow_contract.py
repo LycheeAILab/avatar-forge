@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Static no-spend assertions for Avatar Forge's zeroshot delivery contract."""
 
+from hashlib import sha256
 from pathlib import Path
 
 
@@ -8,6 +9,8 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = (ROOT / "scripts" / "run_pipeline.py").read_text(encoding="utf-8")
 SKILL = (ROOT / "SKILL.md").read_text(encoding="utf-8")
 WORKFLOW = (ROOT / "references" / "workflow.md").read_text(encoding="utf-8")
+FIXED_DRIVER = ROOT / "assets" / "template-driver.wav"
+FIXED_DRIVER_SHA256 = "73c9cc8dde3ee0f4fe0d39b3720bbc4453ab22b3ede2a9068183d0e1c55d3d0b"
 
 
 def require(value: bool, message: str) -> None:
@@ -19,6 +22,10 @@ require('f"{base_url}/api/avatar-forge/generate"' not in SCRIPT, "Legacy black-b
 require('f"{base_url}/api/avatar-forge/template"' in SCRIPT, "Internal template stage is missing")
 require('f"{base_url}/api/avatar-forge/avatar/clone"' in SCRIPT, "Fast-clone stage is missing")
 require('f"{base_url}/api/avatar-forge/avatar/infer"' in SCRIPT, "Zeroshot stage is missing")
+require("--driver-audio" not in SCRIPT, "User-selectable template-driving audio must not exist")
+require('"assets" / "template-driver.wav"' in SCRIPT, "Bundled fixed template-driving audio is not wired")
+require(FIXED_DRIVER.is_file(), "Bundled fixed template-driving audio is missing")
+require(sha256(FIXED_DRIVER.read_bytes()).hexdigest() == FIXED_DRIVER_SHA256, "Bundled fixed template-driving audio changed")
 
 template_position = SCRIPT.index("Preparing internal motion template")
 voice_position = SCRIPT.index("MiMo creates the formal target speech", template_position)
@@ -35,4 +42,4 @@ require("package-only" not in SCRIPT, "Secondary package delivery mode must not 
 require("Return only the final MP4" in SKILL, "SKILL.md must enforce the zeroshot-only delivery contract")
 require("RunningHub has no role after" in WORKFLOW, "Workflow must prohibit RunningHub after template creation")
 
-print("Avatar Forge contract OK: internal template -> MiMo -> v2clone -> zeroshot; only zeroshot MP4 is delivered.")
+print("Avatar Forge contract OK: fixed driver -> internal template -> MiMo -> v2clone -> zeroshot; only zeroshot MP4 is delivered.")

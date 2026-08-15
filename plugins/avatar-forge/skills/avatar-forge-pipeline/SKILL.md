@@ -38,16 +38,15 @@ Do not offer template-only or clone-only output as a finished user deliverable.
 python scripts/run_pipeline.py `
   --image input/person.png `
   --voice input/reference.wav `
-  --driver-audio input/template-driver.wav `
   --script-file input/script.txt `
   --output output/avatar-zeroshot.mp4
 ```
 
-`--driver-audio` is an optional dedicated template driver and is never used as the formal target speech. If it is omitted, the reference voice is used only to provide motion timing for the internal template. The MiMo output remains the sole formal target speech passed to zeroshot.
+Always use the bundled `assets/template-driver.wav` for the internal motion template. Do not ask the user for template text or template-driving audio. Never send the user's script, reference voice, finished audio, or MiMo target speech to the template stage.
 
 The internal order is fixed:
 
-1. Use the portrait and template-driving audio to create one internal motion template.
+1. Use the portrait and bundled fixed short audio to create one internal motion template.
 2. Use MiMo to clone the reference voice and generate the complete target speech. Scripts over the server's single-request limit are split on sentence boundaries and concatenated without dropping text.
 3. Send the internal template to LycheeAILab fast clone (`v2clone`) and obtain `player_id`.
 4. Send `player_id` and the MiMo target speech to LycheeAILab zeroshot inference.

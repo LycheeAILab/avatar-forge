@@ -25,6 +25,8 @@ DEFAULT_BASE_URL = "https://lab.lycheeai.com.cn"
 TERMINAL_TEMPLATE = {"SUCCESS", "FAILED"}
 SUCCESS_DIGITAL = "INFER.SUCCESS"
 FAILED_DIGITAL = "INFER.FAIL"
+FIXED_TEMPLATE_DRIVER = Path(__file__).resolve().parents[1] / "assets" / "template-driver.wav"
+FIXED_TEMPLATE_DRIVER_SHA256 = "73c9cc8dde3ee0f4fe0d39b3720bbc4453ab22b3ede2a9068183d0e1c55d3d0b"
 
 
 class PipelineError(RuntimeError):
@@ -227,7 +229,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--base-url", default=os.environ.get("LYCHEE_LAB_URL", DEFAULT_BASE_URL))
     parser.add_argument("--image", type=Path)
     parser.add_argument("--voice", type=Path)
-    parser.add_argument("--driver-audio", type=Path, help="Optional dedicated audio used only to create the internal motion template")
     parser.add_argument("--audio", type=Path)
     parser.add_argument("--script-file", type=Path)
     parser.add_argument("--output", type=Path, default=Path("avatar-forge-zeroshot.mp4"))
@@ -323,19 +324,20 @@ def main() -> int:
 
     if args.image is None or not args.image.is_file():
         raise PipelineError("A portrait --image is required")
-    if args.driver_audio is not None and not args.driver_audio.is_file():
-        raise PipelineError("--driver-audio does not exist")
+    driver_audio = FIXED_TEMPLATE_DRIVER
+    if not driver_audio.is_file():
+        raise PipelineError("The bundled fixed template-driving audio is missing")
+    if file_hash(driver_audio) != FIXED_TEMPLATE_DRIVER_SHA256:
+        raise PipelineError("The bundled fixed template-driving audio failed its integrity check")
     if args.avatar_only:
         if args.audio is None or not args.audio.is_file():
             raise PipelineError("--avatar-only requires --image and final --audio")
-        driver_audio = args.driver_audio or args.audio
         target_audio = args.audio
         script = ""
         fingerprint_inputs = [args.image, driver_audio, target_audio]
     else:
         if args.voice is None or not args.voice.is_file() or args.script_file is None or not args.script_file.is_file():
             raise PipelineError("Complete workflow requires --image, --voice and --script-file")
-        driver_audio = args.driver_audio or args.voice
         target_audio = None
         script = args.script_file.read_text(encoding="utf-8").strip()
         if not script:
