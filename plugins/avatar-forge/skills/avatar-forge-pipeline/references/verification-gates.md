@@ -5,9 +5,9 @@ Do not claim complete/avatar-only success until every applicable gate passes:
 1. Confirm inputs exist and the user is authorized to use them.
 2. Confirm Lab authentication without exposing credentials.
 3. Confirm the template request used the bundled fixed `template-driver.wav`; reject a missing or hash-mismatched asset.
-4. Confirm the template request did not include user text, reference voice, finished target audio, or MiMo output.
+4. Confirm the template request did not include user text, reference voice, finished target audio, or LycheeTTS output.
 5. Confirm hidden recovery state records the internal template task before polling.
-6. Confirm MiMo generated every script chunk and the reconstructed text equals the complete source.
+6. Confirm LycheeTTS inference went through the Lab gateway, used the intended `speaker_id`, complete script, speed, volume, and sample rate, and returned a non-empty downloaded audio file.
 7. Confirm fast clone succeeded and returned `player_id` from Lychee `v2clone`.
 8. Confirm zeroshot succeeded and returned a final video URL from Lychee `zeroshot`.
 9. Download the zeroshot MP4 to the requested output path.

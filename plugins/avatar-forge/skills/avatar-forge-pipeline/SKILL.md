@@ -1,13 +1,13 @@
 ---
 name: avatar-forge-pipeline
-description: Create a final zeroshot talking-avatar video from a portrait, reference voice or finished audio, and script. Use when Codex should authenticate with LycheeAILab, generate target speech with MiMo, build an internal motion template, fast-clone a digital human, run zeroshot inference, or resume an interrupted avatar job.
+description: Create a final zeroshot talking-avatar video from a portrait, LycheeTTS speaker or finished audio, and script. Use when Codex should authenticate with LycheeAILab, submit an authorized voice clone, synthesize target speech with LycheeTTS through the protected Lab gateway, build an internal motion template, fast-clone a digital human, run zeroshot inference, or resume an interrupted avatar job.
 ---
 
 # Avatar Forge Pipeline
 
 ## Enforce the delivery contract
 
-Return only the final MP4 produced by LycheeAILab zeroshot inference unless the user explicitly requests a standalone MiMo WAV.
+Return only the final MP4 produced by LycheeAILab zeroshot inference unless the user explicitly requests standalone LycheeTTS audio.
 
 - Never return, present, or call a RunningHub template the final digital-human video.
 - Never stop after the internal template task.
@@ -18,10 +18,11 @@ Return only the final MP4 produced by LycheeAILab zeroshot inference unless the 
 
 ## Choose a capability
 
-- Complete: portrait + reference voice + script → internal template → MiMo speech → fast clone → zeroshot MP4.
+- Complete: portrait + LycheeTTS `speaker_id` + script → internal template → target speech → fast clone → zeroshot MP4.
 - Avatar only: portrait + finished WAV/MP3 → internal template → fast clone → zeroshot MP4.
 - Zeroshot only: ready `asset_id` + `player_id` + finished WAV/MP3 → zeroshot MP4.
-- Voice only: reference voice + script → MiMo WAV. Use only when the user explicitly asks for audio.
+- Clone voice: authorized reference audio → LycheeTTS clone request through Lab. The documented response returns `request_id`; do not invent a `speaker_id` or polling endpoint.
+- Voice only: existing `speaker_id` + script → LycheeTTS MP3 through Lab. Use only when the user explicitly asks for audio.
 
 Do not offer template-only or clone-only output as a finished user deliverable.
 
@@ -37,19 +38,27 @@ Do not offer template-only or clone-only output as a finished user deliverable.
 ```powershell
 python scripts/run_pipeline.py `
   --image input/person.png `
-  --voice input/reference.wav `
+  --speaker-id your-speaker-id `
   --script-file input/script.txt `
   --output output/avatar-zeroshot.mp4
 ```
 
-Always use the bundled `assets/template-driver.wav` for the internal motion template. Do not ask the user for template text or template-driving audio. Never send the user's script, reference voice, finished audio, or MiMo target speech to the template stage.
+Always use the bundled `assets/template-driver.wav` for the internal motion template. Do not ask the user for template text or template-driving audio. Never send the user's script, reference voice, finished audio, or LycheeTTS target speech to the template stage.
 
 The internal order is fixed:
 
 1. Use the portrait and bundled fixed short audio to create one internal motion template.
-2. Use MiMo to clone the reference voice and generate the complete target speech. Scripts over the server's single-request limit are split on sentence boundaries and concatenated without dropping text.
+2. Use the protected Lab voice endpoint to generate LycheeTTS target speech from an existing `speaker_id`. The client must send only the user's Lab bearer token; the LycheeTTS API Key remains encrypted in the Lab database.
 3. Send the internal template to LycheeAILab fast clone (`v2clone`) and obtain `player_id`.
-4. Send `player_id` and the MiMo target speech to LycheeAILab zeroshot inference.
+4. Send `player_id` and the LycheeTTS target speech to LycheeAILab zeroshot inference.
+
+Submit a reference voice separately when cloning is needed:
+
+```powershell
+python scripts/run_pipeline.py --clone-voice --voice input/reference.wav
+```
+
+The currently documented clone response contains `request_id` only. Ask the user to obtain the completed `speaker_id` from the platform before synthesis unless the response itself includes one. Never treat `request_id` as `speaker_id`.
 5. Download and return only the zeroshot MP4.
 
 RunningHub is allowed only behind step 1. Steps 3 and 4 must use the LycheeAILab digital-human platform.
@@ -65,7 +74,7 @@ RunningHub is allowed only behind step 1. Steps 3 and 4 must use the LycheeAILab
 
 ## Authenticate safely
 
-Run `python scripts/run_pipeline.py --login-only` when authentication is needed. The browser uses `https://lab.lycheeai.com.cn`; a randomized loopback callback returns only the user's revocable Lab API Key. Provider credentials remain server-side.
+Run `python scripts/run_pipeline.py --login-only` when authentication is needed. The browser uses `https://lab.lycheeai.com.cn`; a randomized loopback callback returns only the user's revocable Lab API Key. LycheeTTS, RunningHub, and digital-human provider credentials remain server-side.
 
 ## Load references when needed
 

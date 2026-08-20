@@ -13,14 +13,14 @@ MAX_FILE_BYTES = 2 * 1024 * 1024
 SKIP_PARTS = {".git", "node_modules", "dist", ".next", ".vinext", ".wrangler", "__pycache__"}
 PATTERNS = {
     "Tencent SecretId": re.compile(r"\bAKID[A-Za-z0-9]{24,}\b"),
-    "API key": re.compile(r"\bsk-(?!test(?:-|_)|example|placeholder)[A-Za-z0-9_-]{20,}\b", re.IGNORECASE),
+    "API key": re.compile(r"\bsk[_-](?!test(?:-|_)|example|placeholder)[A-Za-z0-9_-]{20,}\b", re.IGNORECASE),
     "Bearer credential": re.compile(r"\bBearer\s+[A-Za-z0-9._~-]{20,}\b", re.IGNORECASE),
     "assigned secret": re.compile(
-        r"\b(?:MIMO_API_KEY|RUNNINGHUB_API_KEY|COS_SECRET_ID|COS_SECRET_KEY)\b\s*[:=]\s*[\"'](?!test(?:-|_)|example|placeholder|your)[A-Za-z0-9_./+~-]{16,}",
+        r"\b(?:LYCHEE_TTS_API_KEY|MIMO_API_KEY|RUNNINGHUB_API_KEY|COS_SECRET_ID|COS_SECRET_KEY)\b\s*[:=]\s*[\"'](?!test(?:-|_)|example|placeholder|your)[A-Za-z0-9_./+~-]{16,}",
         re.IGNORECASE,
     ),
     "dotenv secret": re.compile(
-        r"^\s*(?:MIMO_API_KEY|RUNNINGHUB_API_KEY|COS_SECRET_ID|COS_SECRET_KEY)\s*=\s*(?!test(?:-|_)|example|placeholder|your)[A-Za-z0-9_./+~-]{16,}\s*$",
+        r"^\s*(?:LYCHEE_TTS_API_KEY|MIMO_API_KEY|RUNNINGHUB_API_KEY|COS_SECRET_ID|COS_SECRET_KEY)\s*=\s*(?!test(?:-|_)|example|placeholder|your)[A-Za-z0-9_./+~-]{16,}\s*$",
         re.IGNORECASE,
     ),
     "signed COS URL": re.compile(r"[?&]q-signature=[0-9a-f]{40}\b", re.IGNORECASE),

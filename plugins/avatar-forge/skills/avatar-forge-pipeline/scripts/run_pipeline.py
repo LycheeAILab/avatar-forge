@@ -237,7 +237,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--login-only", action="store_true")
     parser.add_argument("--force-login", action="store_true")
     parser.add_argument("--reset-state", action="store_true", help="Discard the hidden recovery state and start a new paid workflow")
-    parser.add_argument("--voice-only", action="store_true", help="Explicitly generate only MiMo speech")
+    parser.add_argument("--clone-voice", action="store_true", help="Submit an authorized reference audio file for voice cloning")
+    parser.add_argument("--voice-only", action="store_true", help="Generate only LycheeTTS speech with an existing speaker ID")
+    parser.add_argument("--speaker-id", default=os.environ.get("LYCHEE_VOICE_SPEAKER_ID"))
+    parser.add_argument("--speed", default="1.0")
+    parser.add_argument("--volume", default="1.0")
+    parser.add_argument("--sample-rate", default="24000")
     parser.add_argument("--avatar-only", action="store_true", help="Use a portrait and existing audio to return only the final zeroshot MP4")
     parser.add_argument("--infer-only", action="store_true", help="Use an existing ready asset/player and audio to return a zeroshot MP4")
     parser.add_argument("--asset-id")
@@ -245,42 +250,47 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def generate_mimo_audio(session: requests.Session, base_url: str, voice: Path, script: str, workspace: Path, state: dict, save_state) -> Path:
-    chunks = split_script(script)
-    chunk_files: list[Path] = []
-    generated = state.setdefault("mimoChunks", {})
-    for index, chunk in enumerate(chunks, start=1):
-        chunk_file = workspace / f"mimo-{index:03d}.wav"
-        if str(index) not in generated or not chunk_file.is_file() or chunk_file.stat().st_size == 0:
-            print(f"Generating target speech with MiMo: part {index}/{len(chunks)}", flush=True)
-            with voice.open("rb") as source:
-                response = session.post(
-                    f"{base_url}/api/avatar-forge/voice/file",
-                    files={"voice": (voice.name, source, media_type(voice))},
-                    data={"script": chunk},
-                    timeout=300,
-                )
-            if not response.ok:
-                raise PipelineError(f"MiMo speech part {index} failed (HTTP {response.status_code}): {response.text[:300]}")
-            chunk_file.write_bytes(response.content)
-            if chunk_file.stat().st_size == 0:
-                raise PipelineError(f"MiMo speech part {index} is empty")
-            generated[str(index)] = {"characters": len(chunk), "file": str(chunk_file)}
-            save_state()
-        chunk_files.append(chunk_file)
+def clone_voice(session: requests.Session, base_url: str, voice: Path) -> dict:
+    with voice.open("rb") as source:
+        response = session.post(
+            f"{base_url}/api/avatar-forge/voice/clone",
+            files={"voice": (voice.name, source, media_type(voice))},
+            timeout=180,
+        )
+    data = require_json(response, "LycheeTTS clone submission")
+    if not data.get("requestId"):
+        raise PipelineError("LycheeTTS clone submission returned no request_id")
+    return data
 
-    final_audio = workspace / "target-speech.wav"
-    if len(chunk_files) == 1:
-        shutil.copyfile(chunk_files[0], final_audio)
-    else:
-        concat_file = workspace / "mimo-concat.txt"
-        concat_file.write_text("".join(f"file '{path.as_posix()}'\n" for path in chunk_files), encoding="utf-8")
-        subprocess.run(["ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(concat_file), "-c", "copy", str(final_audio)], check=True)
-    if not final_audio.is_file() or final_audio.stat().st_size == 0:
-        raise PipelineError("Combined MiMo target speech is empty")
-    state["targetAudioReady"] = True
-    save_state()
-    return final_audio
+
+def generate_lychee_voice_audio(
+    session: requests.Session,
+    base_url: str,
+    speaker_id: str,
+    script: str,
+    output: Path,
+    speed: str,
+    volume: str,
+    sample_rate: str,
+) -> Path:
+    response = session.post(
+        f"{base_url}/api/avatar-forge/voice/file",
+        data={
+            "speakerId": speaker_id,
+            "script": script,
+            "speed": speed,
+            "volume": volume,
+            "sampleRate": sample_rate,
+        },
+        timeout=300,
+    )
+    if not response.ok:
+        raise PipelineError(f"LycheeTTS inference failed (HTTP {response.status_code}): {response.text[:300]}")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_bytes(response.content)
+    if output.stat().st_size == 0:
+        raise PipelineError("LycheeTTS inference returned empty audio")
+    return output
 
 
 def main() -> int:
@@ -291,17 +301,25 @@ def main() -> int:
         print("LycheeAILab authentication succeeded")
         return 0
 
+    if args.clone_voice:
+        if args.voice is None or not args.voice.is_file():
+            raise PipelineError("--clone-voice requires --voice")
+        clone_data = clone_voice(session, base_url, args.voice)
+        print(f"LycheeTTS clone request submitted: {clone_data['requestId']}")
+        if clone_data.get("speakerId"):
+            print(f"speaker_id: {clone_data['speakerId']}")
+        else:
+            print("The documented clone response does not include speaker_id. Obtain it from the platform before running inference.")
+        return 0
+
     if args.voice_only:
-        if args.voice is None or not args.voice.is_file() or args.script_file is None or not args.script_file.is_file():
-            raise PipelineError("--voice-only requires --voice and --script-file")
+        if not args.speaker_id or args.script_file is None or not args.script_file.is_file():
+            raise PipelineError("--voice-only requires --speaker-id and --script-file")
         script = args.script_file.read_text(encoding="utf-8").strip()
-        workspace = args.output.parent / ".avatar-forge" / f"{args.output.stem}-voice"
-        workspace.mkdir(parents=True, exist_ok=True)
-        state: dict = {}
-        audio = generate_mimo_audio(session, base_url, args.voice, script, workspace, state, lambda: None)
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(audio, args.output)
-        print(f"Saved explicitly requested MiMo speech: {args.output}")
+        if not script:
+            raise PipelineError("Script text is empty")
+        generate_lychee_voice_audio(session, base_url, args.speaker_id, script, args.output, args.speed, args.volume, args.sample_rate)
+        print(f"Saved LycheeTTS speech: {args.output}")
         return 0
 
     if args.infer_only:
@@ -336,13 +354,13 @@ def main() -> int:
         script = ""
         fingerprint_inputs = [args.image, driver_audio, target_audio]
     else:
-        if args.voice is None or not args.voice.is_file() or args.script_file is None or not args.script_file.is_file():
-            raise PipelineError("Complete workflow requires --image, --voice and --script-file")
+        if not args.speaker_id or args.script_file is None or not args.script_file.is_file():
+            raise PipelineError("Complete workflow requires --image, --speaker-id and --script-file; use --clone-voice first when needed")
         target_audio = None
         script = args.script_file.read_text(encoding="utf-8").strip()
         if not script:
             raise PipelineError("Script text is empty")
-        fingerprint_inputs = [args.image, driver_audio, args.voice]
+        fingerprint_inputs = [args.image, driver_audio]
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     workspace = args.output.parent / ".avatar-forge" / args.output.stem
@@ -350,14 +368,18 @@ def main() -> int:
         shutil.rmtree(workspace)
     workspace.mkdir(parents=True, exist_ok=True)
     state_file = workspace / "state.json"
-    fingerprint = workflow_fingerprint(fingerprint_inputs, script)
+    fingerprint_text = script + json.dumps(
+        {"speakerId": args.speaker_id, "speed": args.speed, "volume": args.volume, "sampleRate": args.sample_rate},
+        sort_keys=True,
+    )
+    fingerprint = workflow_fingerprint(fingerprint_inputs, fingerprint_text)
     state: dict = {}
     if state_file.is_file():
         state = json.loads(state_file.read_text(encoding="utf-8"))
         if state.get("fingerprint") != fingerprint:
             raise PipelineError("Recovery state belongs to different inputs. Choose a different --output or explicitly pass --reset-state.")
     state.setdefault("fingerprint", fingerprint)
-    state.setdefault("flow", ["internal-template", "mimo-target-speech" if not args.avatar_only else "existing-target-speech", "v2clone", "zeroshot"])
+    state.setdefault("flow", ["internal-template", "lychee-voice-target-speech" if not args.avatar_only else "existing-target-speech", "v2clone", "zeroshot"])
     state["finalOutputType"] = "zeroshot-mp4"
 
     def save_state() -> None:
@@ -392,9 +414,13 @@ def main() -> int:
             state["templateReady"] = True
             save_state()
 
-    # MiMo creates the formal target speech only after the internal template is ready.
+    # LycheeTTS creates the formal target speech only after the internal template is ready.
     if not args.avatar_only:
-        target_audio = generate_mimo_audio(session, base_url, args.voice, script, workspace, state, save_state)
+        target_audio = workspace / "target-speech.mp3"
+        if not state.get("targetAudioReady") or not target_audio.is_file() or target_audio.stat().st_size == 0:
+            generate_lychee_voice_audio(session, base_url, args.speaker_id, script, target_audio, args.speed, args.volume, args.sample_rate)
+            state["targetAudioReady"] = True
+            save_state()
     assert target_audio is not None
 
     if not state.get("cloneRequestId"):

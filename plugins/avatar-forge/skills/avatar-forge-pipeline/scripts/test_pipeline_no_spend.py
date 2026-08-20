@@ -53,6 +53,9 @@ class FakeSession:
 
     def post(self, url: str, **kwargs):
         self.posts.append(url)
+        if url.endswith("/api/avatar-forge/voice/clone"):
+            assert "voice" in kwargs["files"]
+            return FakeResponse(payload={"requestId": "voice-clone-1", "speakerId": None, "status": "QUEUED"})
         if url.endswith("/api/avatar-forge/template"):
             audio_name, audio_source, _media_type = kwargs["files"]["audio"]
             self.template_audio_name = audio_name
@@ -61,7 +64,9 @@ class FakeSession:
             audio_source.seek(position)
             return FakeResponse(payload={"assetId": "asset-1", "taskId": "template-1"})
         if url.endswith("/api/avatar-forge/voice/file"):
-            return FakeResponse(content=b"MIMO_TARGET_AUDIO")
+            assert kwargs["data"]["speakerId"] == "speaker-1"
+            assert kwargs["data"]["script"] == "这是一次不产生真实费用的流程测试。"
+            return FakeResponse(content=b"LYCHEE_TTS_TARGET")
         if url.endswith("/api/avatar-forge/avatar/clone"):
             return FakeResponse(payload={"requestId": "clone-1"})
         if url.endswith("/api/avatar-forge/avatar/infer"):
@@ -102,7 +107,7 @@ def main() -> int:
                 str(SCRIPT),
                 "--base-url", "https://lab.test",
                 "--image", str(image),
-                "--voice", str(voice),
+                "--speaker-id", "speaker-1",
                 "--script-file", str(script),
                 "--output", str(output),
                 "--poll-seconds", "0",
@@ -133,7 +138,7 @@ def main() -> int:
                 str(SCRIPT),
                 "--base-url", "https://lab.test",
                 "--image", str(image),
-                "--voice", str(voice),
+                "--speaker-id", "speaker-1",
                 "--script-file", str(script),
                 "--output", str(output),
                 "--poll-seconds", "0",
@@ -145,6 +150,33 @@ def main() -> int:
         assert resumed_result == 0
         assert fake.posts == expected_posts, "Resume unexpectedly submitted a paid task"
         assert output.read_bytes() == b"ZEROSHOT_FINAL_ONLY"
+
+        clone_fake = FakeSession()
+        try:
+            PIPELINE.authorized_session = lambda *_args, **_kwargs: clone_fake
+            sys.argv = [str(SCRIPT), "--base-url", "https://lab.test", "--clone-voice", "--voice", str(voice)]
+            clone_result = PIPELINE.main()
+        finally:
+            PIPELINE.authorized_session = original_session
+            sys.argv = original_argv
+        assert clone_result == 0
+        assert clone_fake.posts == ["https://lab.test/api/avatar-forge/voice/clone"]
+
+        voice_fake = FakeSession()
+        voice_output = root / "voice-only.mp3"
+        try:
+            PIPELINE.authorized_session = lambda *_args, **_kwargs: voice_fake
+            sys.argv = [
+                str(SCRIPT), "--base-url", "https://lab.test", "--voice-only",
+                "--speaker-id", "speaker-1", "--script-file", str(script), "--output", str(voice_output),
+            ]
+            voice_result = PIPELINE.main()
+        finally:
+            PIPELINE.authorized_session = original_session
+            sys.argv = original_argv
+        assert voice_result == 0
+        assert voice_fake.posts == ["https://lab.test/api/avatar-forge/voice/file"]
+        assert voice_output.read_bytes() == b"LYCHEE_TTS_TARGET"
         print("No-spend pipeline test passed: only the zeroshot MP4 was delivered.")
     return 0
 

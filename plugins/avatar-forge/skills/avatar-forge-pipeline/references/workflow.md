@@ -11,17 +11,18 @@ Internal template media is transient implementation state. Do not copy it to the
 | Stage | Input | Service boundary | Persist for recovery | User deliverable |
 | --- | --- | --- | --- | --- |
 | Internal template | portrait + bundled fixed short audio | Lab `/template` (internally RunningHub) | `assetId`, `templateTaskId`, hidden template until clone succeeds | No |
-| Target speech | reference voice + full script | Lab `/voice/file` (MiMo) | chunk files and combined WAV | No, unless voice-only requested |
+| Voice clone request | authorized reference voice | Lab `/voice/clone` → LycheeTTS | `request_id` | Yes, when requested |
+| Target speech | `speaker_id` + full script | Lab `/voice/file` → LycheeTTS | downloaded MP3 | No, unless voice-only requested |
 | Fast clone | internal template | Lab `/avatar/clone` → Lychee `v2clone` | `cloneRequestId`, `playerId` | No |
-| Final inference | `playerId` + MiMo target WAV | Lab `/avatar/infer` → Lychee `zeroshot` | `inferenceRequestId` | Yes: zeroshot MP4 |
+| Final inference | `playerId` + LycheeTTS target audio | Lab `/avatar/infer` → Lychee `zeroshot` | `inferenceRequestId` | Yes: zeroshot MP4 |
 
 RunningHub has no role after the internal-template stage.
 
-The template-driving audio is always the bundled `assets/template-driver.wav` (SHA-256 `73c9cc8dde3ee0f4fe0d39b3720bbc4453ab22b3ede2a9068183d0e1c55d3d0b`). It is fixed internal input, not a user option. The user's script, reference voice, finished audio, and MiMo target speech must never enter the template stage.
+The template-driving audio is always the bundled `assets/template-driver.wav` (SHA-256 `73c9cc8dde3ee0f4fe0d39b3720bbc4453ab22b3ede2a9068183d0e1c55d3d0b`). It is fixed internal input, not a user option. The user's script, reference voice, finished audio, and LycheeTTS target speech must never enter the template stage.
 
 ## Existing-input variants
 
-- Existing finished audio: skip MiMo; create the internal template with the bundled fixed audio, fast-clone, then use the user's finished audio only for zeroshot.
+- Existing finished audio: skip LycheeTTS; create the internal template with the bundled fixed audio, fast-clone, then use the user's finished audio only for zeroshot.
 - Existing ready `assetId/playerId`: skip template and fast clone; submit audio directly to zeroshot.
 - Existing zeroshot MP4: return or reuse that zeroshot output; do not replace it with an internal template.
 
@@ -43,7 +44,7 @@ Provider IDs are diagnostic state, not normal user-facing output.
 
 ## Script handling
 
-MiMo currently accepts at most 500 characters per server request. The client splits longer scripts at Chinese or English sentence punctuation with a target maximum of 480 characters, generates each chunk, and concatenates WAV chunks. It must verify that normalized concatenated chunk text matches the complete source script.
+The provided LycheeTTS contract does not specify a text-length limit. Submit the complete script once and surface any service validation error without silently truncating it.
 
 ## Billing protection
 
