@@ -23,7 +23,7 @@ Avatar Forge 将目标声音生成、内部动作模板、人物快速克隆与�
 
 | 能力 | 输入 | 输出 |
 | --- | --- | --- |
-| 声音克隆 | 已授权参考声音 | 克隆任务标识；平台完成后取得 `speaker_id` |
+| 声音克隆 | 已授权参考声音 | 自动获得并保存 `speaker_id` |
 | 语音生成 | `speaker_id` + 文案 | LycheeTTS MP3 口播音频 |
 | 内部模板 | 人物图片 + Skill 内置固定短音频 | 仅供快速克隆使用，不对外交付 |
 | 数字人快速克隆 | 内部模板 | 可复用的数字人身份 |
@@ -50,13 +50,13 @@ codex plugin add avatar-forge@avatar-forge
 
 把拥有合法使用权的素材交给 Codex，然后直接描述目标：
 
-> 使用 Avatar Forge，把这张人物图片、已有的 LycheeTTS speaker_id 和口播稿制作成一条完整的数字人口播视频。
+> 使用 Avatar Forge，把这张人物图片、已授权参考声音和口播稿制作成一条完整的数字人口播视频。
 
 首次使用时，Avatar Forge 会打开 LycheeAILab 登录授权页。完成登录后，Codex 会自动执行任务并在各阶段之间安全传递结果。RunningHub 仅在内部模板阶段使用；快速克隆与最终推理全部调用 LycheeAILab 数字人平台，最终只返回 zeroshot 视频。
 
 模板阶段始终使用 Skill 内置的固定短音频，不读取用户口播稿，也不使用用户参考声音、已有目标音频或 LycheeTTS 生成音频。LycheeTTS 根据 `speaker_id` 与文案生成的正式目标口播，只用于最终 zeroshot 推理。
 
-语音克隆与合成由 LycheeAILab 网关调用 LycheeTTS。插件只保存用户本人可撤销的 Lab API Key；LycheeTTS 公共 Key 加密保存在 Lab 数据库，不进入用户电脑、仓库或日志。克隆接口当前文档只返回 `request_id`；取得平台生成的 `speaker_id` 后，才能继续语音合成，不能把两者混用。
+语音克隆与合成由 LycheeAILab 网关调用 LycheeTTS。插件只保存用户本人可撤销的 Lab API Key；LycheeTTS 公共 Key 加密保存在 Lab 数据库，不进入用户电脑、仓库或日志。克隆接口返回的 `request_id` 会被自动登记为后续推理使用的 `speaker_id`，音色尚未就绪时会有限重试，无需用户手动复制 ID。
 
 也可以只使用某一项能力：
 

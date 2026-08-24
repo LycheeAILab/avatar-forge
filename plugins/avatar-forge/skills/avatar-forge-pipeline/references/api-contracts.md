@@ -10,7 +10,7 @@
 
 Base URL: `https://lab.lycheeai.com.cn`
 
-- `POST /api/avatar-forge/voice/clone`: authorized reference audio in multipart field `voice`; returns `requestId`, optional `speakerId`, and status. The upstream contract currently provides no clone-status endpoint, so never invent one or treat `requestId` as `speakerId`.
+- `POST /api/avatar-forge/voice/clone`: authorized reference audio in multipart field `voice`; returns `requestId`, `speakerId`, and status. For compatibility with older gateways, use `requestId` as `speakerId` when the explicit field is absent. Do not invent a clone-status endpoint.
 - `POST /api/avatar-forge/voice/file`: form fields `speakerId`, `script`, `speed`, `volume`, `sampleRate`; returns downloaded LycheeTTS MP3 bytes.
 - `POST /api/avatar-forge/template`: authorized portrait plus bundled fixed `assets/template-driver.wav`; returns `assetId` and `taskId`.
 - `GET /api/avatar-forge/task/:taskId`: poll the internal template until `SUCCESS` or `FAILED`; never return this MP4 as the final output.

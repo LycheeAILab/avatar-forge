@@ -11,7 +11,7 @@ Internal template media is transient implementation state. Do not copy it to the
 | Stage | Input | Service boundary | Persist for recovery | User deliverable |
 | --- | --- | --- | --- | --- |
 | Internal template | portrait + bundled fixed short audio | Lab `/template` (internally RunningHub) | `assetId`, `templateTaskId`, hidden template until clone succeeds | No |
-| Voice clone request | authorized reference voice | Lab `/voice/clone` → LycheeTTS | `request_id` | Yes, when requested |
+| Voice clone request | authorized reference voice | Lab `/voice/clone` → LycheeTTS | `requestId` normalized as `speakerId` | Internal only |
 | Target speech | `speaker_id` + full script | Lab `/voice/file` → LycheeTTS | downloaded MP3 | No, unless voice-only requested |
 | Fast clone | internal template | Lab `/avatar/clone` → Lychee `v2clone` | `cloneRequestId`, `playerId` | No |
 | Final inference | `playerId` + LycheeTTS target audio | Lab `/avatar/infer` → Lychee `zeroshot` | `inferenceRequestId` | Yes: zeroshot MP4 |
@@ -23,6 +23,7 @@ The template-driving audio is always the bundled `assets/template-driver.wav` (S
 ## Existing-input variants
 
 - Existing finished audio: skip LycheeTTS; create the internal template with the bundled fixed audio, fast-clone, then use the user's finished audio only for zeroshot.
+- Reference voice: clone once, persist the returned `speakerId` in recovery state, and continue automatically. Retry transient voice-readiness failures without resubmitting the clone.
 - Existing ready `assetId/playerId`: skip template and fast clone; submit audio directly to zeroshot.
 - Existing zeroshot MP4: return or reuse that zeroshot output; do not replace it with an internal template.
 

@@ -50,6 +50,7 @@ class FakeSession:
         self.posts: list[str] = []
         self.template_audio_name: str | None = None
         self.template_audio_sha256: str | None = None
+        self.voice_failures_remaining = 0
 
     def post(self, url: str, **kwargs):
         self.posts.append(url)
@@ -64,8 +65,11 @@ class FakeSession:
             audio_source.seek(position)
             return FakeResponse(payload={"assetId": "asset-1", "taskId": "template-1"})
         if url.endswith("/api/avatar-forge/voice/file"):
-            assert kwargs["data"]["speakerId"] == "speaker-1"
+            assert kwargs["data"]["speakerId"] in {"speaker-1", "voice-clone-1"}
             assert kwargs["data"]["script"] == "这是一次不产生真实费用的流程测试。"
+            if self.voice_failures_remaining:
+                self.voice_failures_remaining -= 1
+                return FakeResponse(payload={"message": "voice is preparing"}, status_code=502)
             return FakeResponse(content=b"LYCHEE_TTS_TARGET")
         if url.endswith("/api/avatar-forge/avatar/clone"):
             return FakeResponse(payload={"requestId": "clone-1"})
@@ -161,6 +165,8 @@ def main() -> int:
             sys.argv = original_argv
         assert clone_result == 0
         assert clone_fake.posts == ["https://lab.test/api/avatar-forge/voice/clone"]
+        clone_contract = PIPELINE.clone_voice(clone_fake, "https://lab.test", voice)
+        assert clone_contract["speakerId"] == clone_contract["requestId"] == "voice-clone-1"
 
         voice_fake = FakeSession()
         voice_output = root / "voice-only.mp3"
@@ -177,6 +183,36 @@ def main() -> int:
         assert voice_result == 0
         assert voice_fake.posts == ["https://lab.test/api/avatar-forge/voice/file"]
         assert voice_output.read_bytes() == b"LYCHEE_TTS_TARGET"
+
+        # A complete workflow can clone a reference voice and continue without a manual speaker ID.
+        auto_fake = FakeSession()
+        auto_fake.voice_failures_remaining = 1
+        auto_output = root / "result-auto.mp4"
+        original_sleep = PIPELINE.time.sleep
+        try:
+            PIPELINE.authorized_session = lambda *_args, **_kwargs: auto_fake
+            PIPELINE.time.sleep = lambda *_args, **_kwargs: None
+            sys.argv = [
+                str(SCRIPT), "--base-url", "https://lab.test",
+                "--image", str(image), "--voice", str(voice),
+                "--script-file", str(script), "--output", str(auto_output),
+                "--poll-seconds", "0",
+            ]
+            auto_result = PIPELINE.main()
+        finally:
+            PIPELINE.authorized_session = original_session
+            PIPELINE.time.sleep = original_sleep
+            sys.argv = original_argv
+        assert auto_result == 0
+        assert auto_fake.posts == [
+            "https://lab.test/api/avatar-forge/template",
+            "https://lab.test/api/avatar-forge/voice/clone",
+            "https://lab.test/api/avatar-forge/voice/file",
+            "https://lab.test/api/avatar-forge/voice/file",
+            "https://lab.test/api/avatar-forge/avatar/clone",
+            "https://lab.test/api/avatar-forge/avatar/infer",
+        ]
+        assert auto_output.read_bytes() == b"ZEROSHOT_FINAL_ONLY"
         print("No-spend pipeline test passed: only the zeroshot MP4 was delivered.")
     return 0
 

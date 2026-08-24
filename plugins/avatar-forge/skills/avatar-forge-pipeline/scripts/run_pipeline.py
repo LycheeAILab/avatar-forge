@@ -260,6 +260,9 @@ def clone_voice(session: requests.Session, base_url: str, voice: Path) -> dict:
     data = require_json(response, "LycheeTTS clone submission")
     if not data.get("requestId"):
         raise PipelineError("LycheeTTS clone submission returned no request_id")
+    # LycheeTTS accepts its clone request_id as the speaker_id used by /tts/infer.
+    # Keep the fallback for older Lab gateways that do not yet emit speakerId.
+    data["speakerId"] = str(data.get("speakerId") or data["requestId"]).strip()
     return data
 
 
@@ -272,19 +275,30 @@ def generate_lychee_voice_audio(
     speed: str,
     volume: str,
     sample_rate: str,
+    retry_seconds: int = 10,
+    readiness_timeout_seconds: int = 300,
 ) -> Path:
-    response = session.post(
-        f"{base_url}/api/avatar-forge/voice/file",
-        data={
-            "speakerId": speaker_id,
-            "script": script,
-            "speed": speed,
-            "volume": volume,
-            "sampleRate": sample_rate,
-        },
-        timeout=300,
-    )
-    if not response.ok:
+    deadline = time.monotonic() + max(0, readiness_timeout_seconds)
+    transient_statuses = {409, 425, 429, 500, 502, 503, 504}
+    while True:
+        response = session.post(
+            f"{base_url}/api/avatar-forge/voice/file",
+            data={
+                "speakerId": speaker_id,
+                "script": script,
+                "speed": speed,
+                "volume": volume,
+                "sampleRate": sample_rate,
+            },
+            timeout=300,
+        )
+        if response.ok:
+            break
+        if response.status_code in transient_statuses and time.monotonic() < deadline:
+            wait_seconds = max(1, retry_seconds)
+            print(f"LycheeTTS voice is still preparing; retrying in {wait_seconds}s", flush=True)
+            time.sleep(wait_seconds)
+            continue
         raise PipelineError(f"LycheeTTS inference failed (HTTP {response.status_code}): {response.text[:300]}")
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_bytes(response.content)
@@ -306,19 +320,20 @@ def main() -> int:
             raise PipelineError("--clone-voice requires --voice")
         clone_data = clone_voice(session, base_url, args.voice)
         print(f"LycheeTTS clone request submitted: {clone_data['requestId']}")
-        if clone_data.get("speakerId"):
-            print(f"speaker_id: {clone_data['speakerId']}")
-        else:
-            print("The documented clone response does not include speaker_id. Obtain it from the platform before running inference.")
+        print(f"speaker_id: {clone_data['speakerId']}")
         return 0
 
     if args.voice_only:
-        if not args.speaker_id or args.script_file is None or not args.script_file.is_file():
-            raise PipelineError("--voice-only requires --speaker-id and --script-file")
+        if (not args.speaker_id and (args.voice is None or not args.voice.is_file())) or args.script_file is None or not args.script_file.is_file():
+            raise PipelineError("--voice-only requires --script-file plus either --speaker-id or --voice")
         script = args.script_file.read_text(encoding="utf-8").strip()
         if not script:
             raise PipelineError("Script text is empty")
-        generate_lychee_voice_audio(session, base_url, args.speaker_id, script, args.output, args.speed, args.volume, args.sample_rate)
+        speaker_id = args.speaker_id
+        if not speaker_id:
+            assert args.voice is not None
+            speaker_id = str(clone_voice(session, base_url, args.voice)["speakerId"])
+        generate_lychee_voice_audio(session, base_url, speaker_id, script, args.output, args.speed, args.volume, args.sample_rate)
         print(f"Saved LycheeTTS speech: {args.output}")
         return 0
 
@@ -354,13 +369,18 @@ def main() -> int:
         script = ""
         fingerprint_inputs = [args.image, driver_audio, target_audio]
     else:
-        if not args.speaker_id or args.script_file is None or not args.script_file.is_file():
-            raise PipelineError("Complete workflow requires --image, --speaker-id and --script-file; use --clone-voice first when needed")
+        if args.script_file is None or not args.script_file.is_file():
+            raise PipelineError("Complete workflow requires --image and --script-file")
+        if not args.speaker_id and (args.voice is None or not args.voice.is_file()):
+            raise PipelineError("Complete workflow also requires either --speaker-id or a reference --voice")
         target_audio = None
         script = args.script_file.read_text(encoding="utf-8").strip()
         if not script:
             raise PipelineError("Script text is empty")
         fingerprint_inputs = [args.image, driver_audio]
+        if not args.speaker_id:
+            assert args.voice is not None
+            fingerprint_inputs.append(args.voice)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     workspace = args.output.parent / ".avatar-forge" / args.output.stem
@@ -379,7 +399,8 @@ def main() -> int:
         if state.get("fingerprint") != fingerprint:
             raise PipelineError("Recovery state belongs to different inputs. Choose a different --output or explicitly pass --reset-state.")
     state.setdefault("fingerprint", fingerprint)
-    state.setdefault("flow", ["internal-template", "lychee-voice-target-speech" if not args.avatar_only else "existing-target-speech", "v2clone", "zeroshot"])
+    voice_stages = (["lychee-voice-clone"] if not args.avatar_only and not args.speaker_id else []) + (["lychee-voice-target-speech"] if not args.avatar_only else ["existing-target-speech"])
+    state.setdefault("flow", ["internal-template", *voice_stages, "v2clone", "zeroshot"])
     state["finalOutputType"] = "zeroshot-mp4"
 
     def save_state() -> None:
@@ -416,9 +437,18 @@ def main() -> int:
 
     # LycheeTTS creates the formal target speech only after the internal template is ready.
     if not args.avatar_only:
+        speaker_id = args.speaker_id or state.get("speakerId")
+        if not speaker_id:
+            assert args.voice is not None
+            print("Cloning authorized reference voice", flush=True)
+            clone_data = clone_voice(session, base_url, args.voice)
+            state["voiceCloneRequestId"] = clone_data["requestId"]
+            state["speakerId"] = clone_data["speakerId"]
+            speaker_id = str(clone_data["speakerId"])
+            save_state()
         target_audio = workspace / "target-speech.mp3"
         if not state.get("targetAudioReady") or not target_audio.is_file() or target_audio.stat().st_size == 0:
-            generate_lychee_voice_audio(session, base_url, args.speaker_id, script, target_audio, args.speed, args.volume, args.sample_rate)
+            generate_lychee_voice_audio(session, base_url, str(speaker_id), script, target_audio, args.speed, args.volume, args.sample_rate)
             state["targetAudioReady"] = True
             save_state()
     assert target_audio is not None
