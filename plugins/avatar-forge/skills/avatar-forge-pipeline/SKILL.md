@@ -1,6 +1,6 @@
 ---
 name: avatar-forge-pipeline
-description: Create a final zeroshot talking-avatar video from a portrait, LycheeTTS speaker or finished audio, and script. Use when Codex should authenticate with LycheeAILab, submit an authorized voice clone, synthesize target speech with LycheeTTS through the protected Lab gateway, build an internal motion template, fast-clone a digital human, run zeroshot inference, or resume an interrupted avatar job.
+description: Create a final zeroshot talking-avatar video from a portrait, LycheeTTS speaker or finished audio, and script. Use when an agent should authenticate with LycheeAILab, submit an authorized voice clone, synthesize target speech with LycheeTTS through the protected Lab gateway, build an internal motion template, fast-clone a digital human, run zeroshot inference, or resume an interrupted avatar job.
 ---
 
 # Avatar Forge Pipeline
@@ -42,6 +42,8 @@ python scripts/run_pipeline.py `
   --script-file input/script.txt `
   --output output/avatar-zeroshot.mp4
 ```
+
+Resolve `scripts/`, `assets/`, and `references/` relative to this `SKILL.md`. On WorkBuddy, `${CODEBUDDY_SKILL_DIR}` points to this directory; on Codex, use the installed Skill directory supplied by the host.
 
 Always use the bundled `assets/template-driver.wav` for the internal motion template. Do not ask the user for template text or template-driving audio. Never send the user's script, reference voice, finished audio, or LycheeTTS target speech to the template stage.
 

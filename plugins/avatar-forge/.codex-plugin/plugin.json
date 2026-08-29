@@ -1,6 +1,6 @@
 {
   "name": "avatar-forge",
-  "version": "1.1.0+codex.20260824105716",
+  "version": "2.0.0",
   "description": "Create final zeroshot talking-avatar videos with LycheeTTS and protected LycheeAILab services.",
   "author": {
     "name": "LycheeAILab",

@@ -11,7 +11,9 @@
   从人物图片、参考声音和口播稿出发，生成完整的数字人口播视频。
 
   [![License: MIT](https://img.shields.io/badge/License-MIT-111111?style=flat-square)](LICENSE)
-  [![Codex Plugin](https://img.shields.io/badge/Codex-Plugin-111111?style=flat-square)](#安装)
+  [![Version](https://img.shields.io/badge/version-2.0.0-3157D5?style=flat-square)](https://github.com/LycheeAILab/avatar-forge/releases/tag/v2.0.0)
+  [![Codex Plugin](https://img.shields.io/badge/Codex-Plugin-111111?style=flat-square)](#codex)
+  [![WorkBuddy Skill](https://img.shields.io/badge/WorkBuddy-Skill-111111?style=flat-square)](#workbuddy)
   [![LycheeAILab](https://img.shields.io/badge/Built%20by-LycheeAILab-3157D5?style=flat-square)](https://lab.lycheeai.com.cn/)
 </div>
 
@@ -31,20 +33,30 @@ Avatar Forge 将目标声音生成、内部动作模板、人物快速克隆与�
 
 ## 安装
 
-### 让 Codex 帮你安装
+### Codex
+
+#### 让 Codex 帮你安装
 
 在 Codex 桌面端新建任务，发送下面这句话：
 
-> 阅读 https://raw.githubusercontent.com/LycheeAILab/avatar-forge/main/INSTALL.md，帮我安装 Avatar Forge。
+> 阅读 https://raw.githubusercontent.com/LycheeAILab/avatar-forge/v2.0.0/INSTALL.md，帮我安装 Avatar Forge。
 
-### 手动安装
+#### 手动安装
 
 ```powershell
-codex plugin marketplace add https://github.com/LycheeAILab/avatar-forge.git --ref main
+codex plugin marketplace add https://github.com/LycheeAILab/avatar-forge.git --ref v2.0.0
 codex plugin add avatar-forge@avatar-forge
 ```
 
 安装后请新建一个 Codex 任务，使插件在新会话中加载。
+
+### WorkBuddy
+
+在 WorkBuddy 中发送下面这句话：
+
+> 阅读 https://raw.githubusercontent.com/LycheeAILab/avatar-forge/v2.0.0/WORKBUDDY_INSTALL.md，帮我安装 Avatar Forge 2.0.0；安装后只运行本地 doctor，不要提交任何生成任务。
+
+也可以从 [2.0.0 Release](https://github.com/LycheeAILab/avatar-forge/releases/tag/v2.0.0) 下载 `avatar-forge-workbuddy-2.0.0.zip`，在 WorkBuddy 的 Skills 页面上传。安装包与 Codex 插件共享同一套运行脚本，平台适配层不会复制业务流程。
 
 ## 开始创作
 

@@ -6,14 +6,14 @@ This document is an execution guide for Codex agents. If the request is coming f
 
 Installation must run in the Codex desktop app on the user's local machine. A web or isolated cloud conversation cannot install into the desktop plugin directory. In that case, ask the user to open Codex desktop and paste:
 
-> 阅读 https://raw.githubusercontent.com/LycheeAILab/avatar-forge/main/INSTALL.md，帮我安装 Avatar Forge 插件并创建一个新的数字人视频任务。
+> 阅读 https://raw.githubusercontent.com/LycheeAILab/avatar-forge/v2.0.0/INSTALL.md，帮我安装 Avatar Forge 插件并创建一个新的数字人视频任务。
 
 ## Install
 
 Locate the Codex CLI bundled with the desktop app. Do not use an unrelated standalone CLI. Verify it with `"<BUNDLED_CODEX>" --version`, then run:
 
 ```text
-"<BUNDLED_CODEX>" plugin marketplace add https://github.com/LycheeAILab/avatar-forge.git --ref main
+"<BUNDLED_CODEX>" plugin marketplace add https://github.com/LycheeAILab/avatar-forge.git --ref v2.0.0
 "<BUNDLED_CODEX>" plugin marketplace list
 "<BUNDLED_CODEX>" plugin list --marketplace avatar-forge
 "<BUNDLED_CODEX>" plugin add avatar-forge@avatar-forge

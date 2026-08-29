@@ -16,3 +16,4 @@ renders/
 *.crt
 *.csr
 avatar-forge-token.json
+dist/
