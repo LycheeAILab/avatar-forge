@@ -29,6 +29,6 @@ if [ -e "${target}" ]; then
   echo "Previous installation moved to ${backup}"
 fi
 mv "${source_dir}" "${target}"
-python3 -m pip install -r "${target}/requirements.txt"
+python3 -m pip install --user -r "${target}/requirements.txt"
 python3 "${target}/scripts/doctor.py"
 echo "Avatar Forge ${version} is installed for WorkBuddy at ${target}"

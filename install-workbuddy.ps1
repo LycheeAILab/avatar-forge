@@ -35,7 +35,7 @@ Move-Item -LiteralPath $source -Destination $target
 
 $python = Get-Command python -ErrorAction SilentlyContinue
 if (-not $python) { throw "Python 3.9 or newer is required" }
-& $python.Source -m pip install -r (Join-Path $target "requirements.txt")
+& $python.Source -m pip install --user -r (Join-Path $target "requirements.txt")
 & $python.Source (Join-Path $target "scripts\doctor.py")
 if ($LASTEXITCODE -ne 0) { throw "Avatar Forge doctor failed" }
 Write-Host "Avatar Forge $Version is installed for WorkBuddy at $target"
