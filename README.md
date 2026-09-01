@@ -8,10 +8,10 @@
   **让一张照片，成为可以开口表达的数字人。**
 
   面向 AI Agent 的开源数字人视频工作流。<br />
-  从人物图片、参考声音和口播稿出发，生成完整的数字人口播视频。
+  从参考视频提炼新文案，或从人物图片、参考声音和口播稿生成完整数字人口播视频。
 
   [![License: MIT](https://img.shields.io/badge/License-MIT-111111?style=flat-square)](LICENSE)
-  [![Version](https://img.shields.io/badge/version-2.0.0-3157D5?style=flat-square)](https://github.com/LycheeAILab/avatar-forge/releases/tag/v2.0.0)
+  [![Version](https://img.shields.io/badge/version-2.1.0-3157D5?style=flat-square)](https://github.com/LycheeAILab/avatar-forge/releases/tag/v2.1.0)
   [![Codex Plugin](https://img.shields.io/badge/Codex-Plugin-111111?style=flat-square)](#codex)
   [![WorkBuddy Skill](https://img.shields.io/badge/WorkBuddy-Skill-111111?style=flat-square)](#workbuddy)
   [![LycheeAILab](https://img.shields.io/badge/Built%20by-LycheeAILab-3157D5?style=flat-square)](https://lab.lycheeai.com.cn/)
@@ -25,6 +25,7 @@ Avatar Forge 将目标声音生成、内部动作模板、人物快速克隆与�
 
 | 能力 | 输入 | 输出 |
 | --- | --- | --- |
+| 视频文案再创作 | 上传视频或有权使用的抖音链接 | 原文案 + 独立保存的改写口播稿 |
 | 声音克隆 | 已授权参考声音 | 自动获得并保存 `speaker_id` |
 | 语音生成 | `speaker_id` + 文案 | LycheeTTS MP3 口播音频 |
 | 内部模板 | 人物图片 + Skill 内置固定短音频 | 仅供快速克隆使用，不对外交付 |
@@ -39,12 +40,12 @@ Avatar Forge 将目标声音生成、内部动作模板、人物快速克隆与�
 
 在 Codex 桌面端新建任务，发送下面这句话：
 
-> 阅读 https://raw.githubusercontent.com/LycheeAILab/avatar-forge/v2.0.0/INSTALL.md，帮我安装 Avatar Forge。
+> 阅读 https://raw.githubusercontent.com/LycheeAILab/avatar-forge/v2.1.0/INSTALL.md，帮我安装 Avatar Forge。
 
 #### 手动安装
 
 ```powershell
-codex plugin marketplace add https://github.com/LycheeAILab/avatar-forge.git --ref v2.0.0
+codex plugin marketplace add https://github.com/LycheeAILab/avatar-forge.git --ref v2.1.0
 codex plugin add avatar-forge@avatar-forge
 ```
 
@@ -54,13 +55,17 @@ codex plugin add avatar-forge@avatar-forge
 
 在 WorkBuddy 中发送下面这句话：
 
-> 阅读 https://raw.githubusercontent.com/LycheeAILab/avatar-forge/v2.0.0/WORKBUDDY_INSTALL.md，帮我安装 Avatar Forge 2.0.0；安装后只运行本地 doctor，不要提交任何生成任务。
+> 阅读 https://raw.githubusercontent.com/LycheeAILab/avatar-forge/v2.1.0/WORKBUDDY_INSTALL.md，帮我安装 Avatar Forge 2.1.0；安装后只运行本地 doctor，不要提交任何生成任务。
 
-也可以从 [2.0.0 Release](https://github.com/LycheeAILab/avatar-forge/releases/tag/v2.0.0) 下载 `avatar-forge-workbuddy-2.0.0.zip`，在 WorkBuddy 的 Skills 页面上传。安装包与 Codex 插件共享同一套运行脚本，平台适配层不会复制业务流程。
+也可以从 [2.1.0 Release](https://github.com/LycheeAILab/avatar-forge/releases/tag/v2.1.0) 下载 `avatar-forge-workbuddy-2.1.0.zip`，在 WorkBuddy 的 Skills 页面上传。安装包与 Codex 插件共享同一套运行脚本，平台适配层不会复制业务流程。
 
 ## 开始创作
 
 把拥有合法使用权的素材交给 Codex，然后直接描述目标：
+
+> 使用 Avatar Forge，下载这个我有权使用的抖音视频，提取原文案，并改写成一版新的口播稿。先不要生成数字人视频。
+
+也可以直接上传本地视频。Avatar Forge 会保留原始转写稿，并把改写稿单独保存；改写会调整开头、结构、节奏、转场和结尾，而不是简单替换同义词。只有你明确要求时，才会继续生成声音或数字人视频。
 
 > 使用 Avatar Forge，把这张人物图片、已授权参考声音和口播稿制作成一条完整的数字人口播视频。
 
@@ -77,6 +82,7 @@ codex plugin add avatar-forge@avatar-forge
 使用 Avatar Forge，根据这个 speaker_id 和文案生成口播音频。
 使用 Avatar Forge，用这张人物图片和已有音频生成最终 zeroshot 数字人视频。
 使用 Avatar Forge，让这个已有数字人使用指定音频执行 zeroshot 推理。
+使用 Avatar Forge，提取这个视频的口播文案并改写，完成后停止。
 ```
 
 ## 设计原则
@@ -92,6 +98,8 @@ codex plugin add avatar-forge@avatar-forge
 Avatar Forge 通过 LycheeAILab 账户完成身份验证。插件不会获取或暴露 LycheeTTS、RunningHub、数字人服务和对象存储的公共供应商凭据；这些凭据只存在于 Lab 服务端的加密凭据库。
 
 请仅上传已获得合法授权的人物图片、声音、视频和文案。不得利用本项目冒充他人、误导公众或生成违法违规内容。
+
+抖音下载能力由随 Skill 安装的 `yt-dlp` 提供，用户无需预先安装其他下载项目。如果平台要求登录态，Avatar Forge 必须先获得许可，且只允许从本机浏览器读取；不得要求用户粘贴、打印或保存 Cookie。
 
 ## 开源协议
 

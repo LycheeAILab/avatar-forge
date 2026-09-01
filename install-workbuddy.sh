@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-version="${1:-2.0.0}"
+version="${1:-2.1.0}"
 repo="https://github.com/LycheeAILab/avatar-forge/releases/download/v${version}"
 archive_name="avatar-forge-workbuddy-${version}.zip"
 temp_root="$(mktemp -d)"

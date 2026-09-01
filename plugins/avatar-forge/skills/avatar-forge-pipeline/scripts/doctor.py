@@ -27,15 +27,29 @@ def main() -> int:
             "ok": importlib.util.find_spec("requests") is not None,
             "required": "requests>=2.31,<3",
         },
+        "ytDlp": {
+            "ok": importlib.util.find_spec("yt_dlp") is not None,
+            "required": "yt-dlp>=2025.1.1",
+        },
         "pipeline": {"ok": (ROOT / "scripts" / "run_pipeline.py").is_file()},
+        "videoSource": {"ok": (ROOT / "scripts" / "prepare_video_source.py").is_file()},
+        "localTranscriptionScript": {"ok": (ROOT / "scripts" / "transcribe_video.py").is_file()},
+        "videoRecreationGuide": {"ok": (ROOT / "references" / "video-recreation.md").is_file()},
         "templateDriver": {
             "ok": DRIVER.is_file() and sha256(DRIVER.read_bytes()).hexdigest() == EXPECTED_DRIVER_SHA256,
             "sha256": sha256(DRIVER.read_bytes()).hexdigest() if DRIVER.is_file() else None,
         },
         "skill": {"ok": (ROOT / "SKILL.md").is_file()},
     }
+    optional = {
+        "fasterWhisper": {
+            "ok": importlib.util.find_spec("faster_whisper") is not None,
+            "required": False,
+            "install": "python -m pip install -r requirements-transcription.txt",
+        }
+    }
     ok = all(item["ok"] for item in checks.values())
-    print(json.dumps({"ok": ok, "mode": "no-spend", "checks": checks}, ensure_ascii=False, indent=2))
+    print(json.dumps({"ok": ok, "mode": "no-spend", "checks": checks, "optional": optional}, ensure_ascii=False, indent=2))
     return 0 if ok else 1
 
 
