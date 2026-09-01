@@ -10,7 +10,7 @@
   选择公模快速开拍，或用一张照片和一段声音创建专属数字人。<br />
   从参考视频提炼新文案，再与 HyperFrames 或 ChatCut 组合成完整口播作品。
 
-  [![Version](https://img.shields.io/badge/version-2.1.1-7257E8?style=for-the-badge)](https://github.com/LycheeAILab/avatar-forge/releases/tag/v2.1.1)
+  [![Version](https://img.shields.io/badge/version-2.2.0-7257E8?style=for-the-badge)](https://github.com/LycheeAILab/avatar-forge/releases/tag/v2.2.0)
   [![Codex Plugin](https://img.shields.io/badge/Codex-Plugin-111827?style=for-the-badge)](#-安装)
   [![WorkBuddy Skill](https://img.shields.io/badge/WorkBuddy-Skill-2563EB?style=for-the-badge)](#workbuddy)
   [![License: MIT](https://img.shields.io/badge/License-MIT-16A34A?style=for-the-badge)](LICENSE)
@@ -101,9 +101,9 @@ codex plugin add avatar-forge@avatar-forge
 
 在 WorkBuddy 中发送：
 
-> 阅读 https://raw.githubusercontent.com/LycheeAILab/avatar-forge/v2.1.1/WORKBUDDY_INSTALL.md，帮我安装 Avatar Forge 2.1.1；安装后只运行本地 doctor，不要提交任何生成任务。
+> 阅读 https://raw.githubusercontent.com/LycheeAILab/avatar-forge/v2.2.0/WORKBUDDY_INSTALL.md，帮我安装 Avatar Forge 2.2.0；安装后只运行本地 doctor，不要提交任何生成任务。
 
-也可以从 [Avatar Forge 2.1.1 Release](https://github.com/LycheeAILab/avatar-forge/releases/tag/v2.1.1) 下载 `avatar-forge-workbuddy-2.1.1.zip`，然后在 WorkBuddy 的 Skills 页面上传。
+也可以从 [Avatar Forge 2.2.0 Release](https://github.com/LycheeAILab/avatar-forge/releases/tag/v2.2.0) 下载 `avatar-forge-workbuddy-2.2.0.zip`，然后在 WorkBuddy 的 Skills 页面上传。
 
 ## ✅ 素材建议
 
@@ -121,6 +121,7 @@ codex plugin add avatar-forge@avatar-forge
 ### 参考视频
 
 - 可以直接上传本地视频，也可以提供有权下载和使用的抖音链接。
+- 抖音链接优先走内置免 Cookie 下载核心，不依赖 Edge/Chrome Cookie、Windows DPAPI 或 ChatGPT 浏览器扩展。
 - 原始转写稿与改写稿分别保存，不会互相覆盖。
 - 只有在你明确要求后，改写稿才会继续进入声音或数字人生成。
 
@@ -129,7 +130,7 @@ codex plugin add avatar-forge@avatar-forge
 - **先授权再生成**：仅处理你拥有合法使用权的人物、声音、视频和文案。
 - **费用有确认**：未经用户确认，不提交可能产生费用的生成任务。
 - **密钥不下发**：第三方服务凭据留在服务端，不进入仓库、用户文件或日志。
-- **Cookie 不外传**：需要本机浏览器登录态时必须先征得许可，不要求粘贴、打印或保存 Cookie。
+- **不读取浏览器 Cookie**：抖音下载不读取 Edge/Chrome 登录态，不受 Windows DPAPI 或浏览器扩展影响。
 - **拒绝冒充滥用**：不得用于冒充他人、欺骗公众或制作违法违规内容。
 
 ## 🔌 生态组合
@@ -143,7 +144,7 @@ Avatar Forge 专注于数字人的创建、声音与口播生成。成片可以�
 
 ## 📄 开源协议
 
-Avatar Forge 自有代码基于 [MIT License](LICENSE) 开源。视频下载与本地转写使用独立的开源依赖，并遵循各自许可证。第三方平台服务受其服务条款约束。
+Avatar Forge 自有代码基于 [MIT License](LICENSE) 开源。`scripts/douk_downloader` 是隔离执行的 DouK 衍生辅助组件，保留完整源码、归属说明与 GPL-3.0 许可证；`yt-dlp` 和本地转写依赖遵循各自许可证。详见 [Third-party notices](THIRD_PARTY_NOTICES.md)。第三方平台服务受其服务条款约束。
 
 ---
 

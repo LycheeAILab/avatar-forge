@@ -42,6 +42,10 @@ def main() -> int:
         },
         "pipeline": {"ok": (ROOT / "scripts" / "run_pipeline.py").is_file()},
         "videoSource": {"ok": (ROOT / "scripts" / "prepare_video_source.py").is_file()},
+        "cookieFreeDouyin": {
+            "ok": (ROOT / "scripts" / "douk_downloader" / "download.py").is_file(),
+            "browserCookiesRequired": False,
+        },
         "localTranscriptionScript": {"ok": (ROOT / "scripts" / "transcribe_video.py").is_file()},
         "videoRecreationGuide": {"ok": (ROOT / "references" / "video-recreation.md").is_file()},
         "templateDriver": {
@@ -49,7 +53,7 @@ def main() -> int:
             "sha256": sha256(DRIVER.read_bytes()).hexdigest() if DRIVER.is_file() else None,
         },
         "skill": {"ok": (ROOT / "SKILL.md").is_file()},
-        "version": {"ok": version == "2.1.1", "value": version, "required": "2.1.1"},
+        "version": {"ok": version == "2.2.0", "value": version, "required": "2.2.0"},
         "pluginVersion": {
             "ok": not PLUGIN_MANIFEST.is_file() or plugin_version == version,
             "value": plugin_version,
