@@ -10,7 +10,7 @@
   选择公模快速开拍，或用一张照片和一段声音创建专属数字人。<br />
   从参考视频提炼新文案，再与 HyperFrames 或 ChatCut 组合成完整口播作品。
 
-  [![Version](https://img.shields.io/badge/version-2.1.0-7257E8?style=for-the-badge)](https://github.com/LycheeAILab/avatar-forge/releases/tag/v2.1.0)
+  [![Version](https://img.shields.io/badge/version-2.1.1-7257E8?style=for-the-badge)](https://github.com/LycheeAILab/avatar-forge/releases/tag/v2.1.1)
   [![Codex Plugin](https://img.shields.io/badge/Codex-Plugin-111827?style=for-the-badge)](#-安装)
   [![WorkBuddy Skill](https://img.shields.io/badge/WorkBuddy-Skill-2563EB?style=for-the-badge)](#workbuddy)
   [![License: MIT](https://img.shields.io/badge/License-MIT-16A34A?style=for-the-badge)](LICENSE)
@@ -83,24 +83,27 @@ flowchart LR
 
 在 Codex 桌面端新建任务并发送：
 
-> 阅读 https://raw.githubusercontent.com/LycheeAILab/avatar-forge/v2.1.0/INSTALL.md，帮我安装 Avatar Forge。
+> 阅读 https://raw.githubusercontent.com/LycheeAILab/avatar-forge/main/INSTALL.md，帮我安装或升级 Avatar Forge。
 
 #### 手动安装
 
 ```powershell
-codex plugin marketplace add https://github.com/LycheeAILab/avatar-forge.git --ref v2.1.0
+codex plugin marketplace add https://github.com/LycheeAILab/avatar-forge.git
 codex plugin add avatar-forge@avatar-forge
 ```
 
 安装完成后新建一个 Codex 任务，使插件在新会话中加载。
 
+> [!WARNING]
+> 如果以前安装过独立版 `~/.codex/skills/avatar-forge-pipeline`，请先将它移出活动 Skills 目录并保留备份。旧独立版与插件版同名，同时存在时可能导致 Agent 读取旧能力。曾使用 `--ref` 固定旧标签的 Marketplace 也需要重新添加为不带 `--ref` 的官方仓库源。
+
 ### WorkBuddy
 
 在 WorkBuddy 中发送：
 
-> 阅读 https://raw.githubusercontent.com/LycheeAILab/avatar-forge/v2.1.0/WORKBUDDY_INSTALL.md，帮我安装 Avatar Forge 2.1.0；安装后只运行本地 doctor，不要提交任何生成任务。
+> 阅读 https://raw.githubusercontent.com/LycheeAILab/avatar-forge/v2.1.1/WORKBUDDY_INSTALL.md，帮我安装 Avatar Forge 2.1.1；安装后只运行本地 doctor，不要提交任何生成任务。
 
-也可以从 [Avatar Forge 2.1.0 Release](https://github.com/LycheeAILab/avatar-forge/releases/tag/v2.1.0) 下载 `avatar-forge-workbuddy-2.1.0.zip`，然后在 WorkBuddy 的 Skills 页面上传。
+也可以从 [Avatar Forge 2.1.1 Release](https://github.com/LycheeAILab/avatar-forge/releases/tag/v2.1.1) 下载 `avatar-forge-workbuddy-2.1.1.zip`，然后在 WorkBuddy 的 Skills 页面上传。
 
 ## ✅ 素材建议
 

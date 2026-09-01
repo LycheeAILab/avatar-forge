@@ -6,6 +6,7 @@ from __future__ import annotations
 from hashlib import sha256
 import importlib.util
 import json
+import os
 from pathlib import Path
 import platform
 import sys
@@ -13,10 +14,18 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 DRIVER = ROOT / "assets" / "template-driver.wav"
+VERSION_FILE = ROOT / "VERSION"
+PLUGIN_MANIFEST = ROOT.parents[1] / ".codex-plugin" / "plugin.json"
 EXPECTED_DRIVER_SHA256 = "73c9cc8dde3ee0f4fe0d39b3720bbc4453ab22b3ede2a9068183d0e1c55d3d0b"
 
 
 def main() -> int:
+    version = VERSION_FILE.read_text(encoding="utf-8").strip() if VERSION_FILE.is_file() else None
+    codex_home = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex")).expanduser().resolve()
+    legacy_skill = codex_home / "skills" / "avatar-forge-pipeline"
+    plugin_version = None
+    if PLUGIN_MANIFEST.is_file():
+        plugin_version = json.loads(PLUGIN_MANIFEST.read_text(encoding="utf-8")).get("version")
     checks = {
         "python": {
             "ok": sys.version_info >= (3, 9),
@@ -40,6 +49,18 @@ def main() -> int:
             "sha256": sha256(DRIVER.read_bytes()).hexdigest() if DRIVER.is_file() else None,
         },
         "skill": {"ok": (ROOT / "SKILL.md").is_file()},
+        "version": {"ok": version == "2.1.1", "value": version, "required": "2.1.1"},
+        "pluginVersion": {
+            "ok": not PLUGIN_MANIFEST.is_file() or plugin_version == version,
+            "value": plugin_version,
+            "applicable": PLUGIN_MANIFEST.is_file(),
+        },
+        "legacyStandaloneCollision": {
+            "ok": not PLUGIN_MANIFEST.is_file() or not legacy_skill.is_dir(),
+            "value": str(legacy_skill) if legacy_skill.is_dir() else None,
+            "remediation": "Move the verified legacy directory to ~/.codex/legacy-skill-backups and start a new task",
+            "applicable": PLUGIN_MANIFEST.is_file(),
+        },
     }
     optional = {
         "fasterWhisper": {
@@ -49,7 +70,7 @@ def main() -> int:
         }
     }
     ok = all(item["ok"] for item in checks.values())
-    print(json.dumps({"ok": ok, "mode": "no-spend", "checks": checks, "optional": optional}, ensure_ascii=False, indent=2))
+    print(json.dumps({"ok": ok, "version": version, "mode": "no-spend", "checks": checks, "optional": optional}, ensure_ascii=False, indent=2))
     return 0 if ok else 1
 
 
