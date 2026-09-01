@@ -6,8 +6,9 @@ Use this workflow when the user supplies a local video or an authorized Douyin l
 
 - Treat an attached/uploaded video as the preferred source; do not download it again.
 - For a Douyin URL, confirm the user is permitted to download and reuse the content.
-- Invoke `scripts/prepare_video_source.py`. It uses the Skill's declared `yt-dlp` dependency, so users do not need a separate downloader project.
-- If Douyin requires a login session, obtain permission before using `--cookies-from-browser`. Never ask the user to paste cookies, and never print, copy, or save cookie values.
+- Invoke `scripts/prepare_video_source.py`. Its primary engine is the bundled cookie-free DouK-derived helper; `yt-dlp` is an automatic fallback. Users do not install another downloader.
+- Do not depend on Edge/Chrome cookies, Windows DPAPI, or a ChatGPT browser extension. Never ask the user to paste cookies, and never read, print, copy, or save cookie values.
+- If both engines fail, preserve the user's URL, return sanitized engine errors, and let the user retry later. Manual browser download is a last user-chosen alternative, not the default workflow.
 
 ## Transcription
 

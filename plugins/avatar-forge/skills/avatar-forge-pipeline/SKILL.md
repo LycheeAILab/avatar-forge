@@ -7,7 +7,7 @@ description: Create a final zeroshot talking-avatar video or prepare its script 
 
 ## Identify the installed release
 
-When asked about the installed or latest available capability, read the adjacent `VERSION` file and report that exact value. Do not infer a version from conversation history, README prose, authentication state, or an older standalone Skill. This package is release `2.1.1`.
+When asked about the installed or latest available capability, read the adjacent `VERSION` file and report that exact value. Do not infer a version from conversation history, README prose, authentication state, or an older standalone Skill. This package is release `2.2.0`.
 
 If both this plugin Skill and a legacy standalone `~/.codex/skills/avatar-forge-pipeline` are present, stop and explain the name collision. Preserve the legacy directory as a timestamped backup outside the active `skills` directory, then start a new Codex task before validating capabilities.
 
@@ -64,7 +64,7 @@ Inspect the image when possible. Reject or request a replacement when facial fea
 
 Read [references/video-recreation.md](references/video-recreation.md) before downloading, transcribing, or rewriting a reference video.
 
-The downloader is declared in `requirements.txt`. If `python scripts/doctor.py` reports `ytDlp` missing, install that file automatically before continuing; do not require the user to locate or install a separate downloader project.
+The Skill includes a cookie-free Douyin engine derived from the user's proven DouK request flow, with `yt-dlp` as a fallback. If `python scripts/doctor.py` reports dependencies missing, install `requirements.txt` automatically before continuing. Never require the user to install a separate downloader, export browser cookies, use Edge/Chrome DPAPI, or install a ChatGPT browser extension.
 
 For an uploaded/local video:
 
@@ -80,7 +80,7 @@ python scripts/prepare_video_source.py `
   --output output/reference.mp4
 ```
 
-If Douyin requires a login session, first ask for permission, then add `--cookies-from-browser edge` (or `chrome`/`firefox`). Never ask the user to paste cookies, and never print, copy, or save cookie values.
+The command first uses the bundled cookie-free engine and automatically falls back to `yt-dlp`. Do not add browser-cookie flags or tell the user to download the video manually merely because Edge DPAPI or a browser extension is unavailable. If both engines fail, report their sanitized errors and stop; never ask for, read, print, copy, or save browser cookies.
 
 Prefer a trusted transcription tool already available to the agent. For fully local transcription, install the optional dependency only when needed and run:
 
@@ -131,6 +131,6 @@ Run `python scripts/run_pipeline.py --login-only` when authentication is needed.
 
 ## Verify without spending
 
-- Run `python -m py_compile scripts/run_pipeline.py scripts/prepare_video_source.py scripts/transcribe_video.py scripts/test_pipeline_no_spend.py`.
-- Run `python scripts/test_workflow_contract.py`, `python scripts/test_pipeline_no_spend.py`, `python scripts/test_video_source_no_network.py`, and the secret scan.
+- Run `python -m py_compile scripts/run_pipeline.py scripts/prepare_video_source.py scripts/douk_downloader/download.py scripts/douk_downloader/a_bogus.py scripts/transcribe_video.py scripts/test_pipeline_no_spend.py`.
+- Run `python scripts/test_workflow_contract.py`, `python scripts/test_pipeline_no_spend.py`, `python scripts/test_video_source_no_network.py`, `python scripts/test_douyin_downloader_no_network.py`, and the secret scan.
 - Do not submit a real provider task solely to test installation or documentation.

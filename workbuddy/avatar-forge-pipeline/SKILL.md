@@ -7,7 +7,7 @@ description: Create a final zeroshot talking-avatar video or prepare its script 
 
 ## Identify the installed release
 
-Read the adjacent `VERSION` file when asked which release is installed. Report that exact value instead of inferring a version from conversation history or documentation prose. This package is release `2.1.1`.
+Read the adjacent `VERSION` file when asked which release is installed. Report that exact value instead of inferring a version from conversation history or documentation prose. This package is release `2.2.0`.
 
 ## Keep the final-output contract
 
@@ -68,7 +68,7 @@ Inspect the image when possible. Request a replacement if the face is unclear, o
 
 Read `references/video-recreation.md` first. For a local or uploaded video:
 
-The WorkBuddy installer installs `requirements.txt`, including the downloader. If the doctor reports `ytDlp` missing, install that requirements file before continuing; do not require a separate downloader project.
+The WorkBuddy package includes a cookie-free Douyin engine derived from the proven DouK request flow, with `yt-dlp` as a fallback. The installer installs `requirements.txt`; do not require a separate downloader project, browser cookies, Windows DPAPI, or a ChatGPT browser extension.
 
 ```powershell
 python "${CODEBUDDY_SKILL_DIR}/scripts/prepare_video_source.py" --video "C:/absolute/input/reference.mp4"
@@ -82,7 +82,7 @@ python "${CODEBUDDY_SKILL_DIR}/scripts/prepare_video_source.py" `
   --output "C:/absolute/output/reference.mp4"
 ```
 
-If Douyin requires a login session, first ask for permission, then add `--cookies-from-browser edge` (or `chrome`/`firefox`). Never ask the user to paste cookies, and never print, copy, or save cookie values.
+The command first uses the bundled cookie-free engine and automatically falls back to `yt-dlp`. Do not add browser-cookie flags or send the user to manually download merely because DPAPI or an extension is unavailable. Never ask for, read, print, copy, or save browser cookies.
 
 Prefer an available trusted transcription tool. For optional fully local transcription:
 

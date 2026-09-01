@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Resolve a local video or download an authorized Douyin video with yt-dlp."""
+"""Resolve a local video or download an authorized Douyin video without browser cookies."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ import argparse
 import json
 from pathlib import Path
 import shutil
+import subprocess
 import sys
 
 
@@ -28,7 +29,26 @@ def validate_video(path: Path) -> Path:
     return resolved
 
 
-def download_douyin(url: str, output: Path, browser: str | None) -> Path:
+def download_with_douk_direct(url: str, output: Path) -> Path:
+    helper = Path(__file__).resolve().parent / "douk_downloader" / "download.py"
+    result = subprocess.run(
+        [sys.executable, str(helper), "--url", url, "--output", str(output)],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    if result.returncode != 0:
+        message = result.stderr.strip().splitlines()
+        raise SourceError(message[-1] if message else "DouK direct downloader failed")
+    try:
+        payload = json.loads(result.stdout)
+        return validate_video(Path(payload["video"]))
+    except (json.JSONDecodeError, KeyError, TypeError) as exc:
+        raise SourceError("DouK direct downloader returned an invalid result") from exc
+
+
+def download_with_ytdlp(url: str, output: Path) -> Path:
     try:
         from yt_dlp import YoutubeDL
         from yt_dlp.utils import DownloadError
@@ -46,8 +66,6 @@ def download_douyin(url: str, output: Path, browser: str | None) -> Path:
         "quiet": True,
         "no_warnings": True,
     }
-    if browser:
-        options["cookiesfrombrowser"] = (browser,)
     try:
         with YoutubeDL(options) as downloader:
             info = downloader.extract_info(url, download=True)
@@ -55,11 +73,7 @@ def download_douyin(url: str, output: Path, browser: str | None) -> Path:
             paths = [item.get("filepath") for item in requested if item.get("filepath")]
             paths.extend([info.get("filepath"), downloader.prepare_filename(info)])
     except DownloadError as exc:
-        hint = (
-            " Update yt-dlp first. If Douyin requires a login session, rerun with "
-            "--cookies-from-browser edge|chrome|firefox only after the user approves local browser access."
-        )
-        raise SourceError(f"Douyin download failed.{hint}") from exc
+        raise SourceError("yt-dlp fallback failed") from exc
 
     candidates = [Path(path) for path in paths if path]
     candidates.extend(sorted(output.parent.glob(f"{output.stem}.*")))
@@ -69,17 +83,30 @@ def download_douyin(url: str, output: Path, browser: str | None) -> Path:
     raise SourceError("Douyin download completed but no readable video file was produced")
 
 
+def download_douyin(url: str, output: Path) -> tuple[Path, str]:
+    errors = []
+    try:
+        return download_with_douk_direct(url, output), "douk-direct"
+    except (SourceError, OSError) as exc:
+        errors.append(str(exc))
+    try:
+        return download_with_ytdlp(url, output), "yt-dlp"
+    except (SourceError, OSError) as exc:
+        errors.append(str(exc))
+    detail = "; ".join(item for item in errors if item)
+    raise SourceError(
+        "Douyin download failed in both cookie-free engines. "
+        "No Edge/Chrome cookie or ChatGPT browser extension is required. "
+        f"Details: {detail}"
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--video", type=Path, help="Uploaded or existing local video")
     source.add_argument("--douyin-url", help="Authorized Douyin share or canonical URL")
     parser.add_argument("--output", type=Path, help="Stable output path; required for Douyin")
-    parser.add_argument(
-        "--cookies-from-browser",
-        choices=("edge", "chrome", "firefox"),
-        help="Use local browser cookies only with explicit user approval",
-    )
     args = parser.parse_args()
 
     if args.video:
@@ -94,10 +121,13 @@ def main() -> int:
     else:
         if not args.output:
             raise SourceError("--output is required with --douyin-url")
-        video = download_douyin(args.douyin_url, args.output, args.cookies_from_browser)
+        video, engine = download_douyin(args.douyin_url, args.output)
         source_type = "douyin"
 
-    print(json.dumps({"video": str(video), "sourceType": source_type}, ensure_ascii=False))
+    payload = {"video": str(video), "sourceType": source_type}
+    if source_type == "douyin":
+        payload["engine"] = engine
+    print(json.dumps(payload, ensure_ascii=True))
     return 0
 
 
