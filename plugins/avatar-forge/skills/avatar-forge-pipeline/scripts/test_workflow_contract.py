@@ -10,6 +10,9 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = (ROOT / "scripts" / "run_pipeline.py").read_text(encoding="utf-8")
 SKILL = (ROOT / "SKILL.md").read_text(encoding="utf-8")
 WORKFLOW = (ROOT / "references" / "workflow.md").read_text(encoding="utf-8")
+VIDEO_GUIDE = ROOT / "references" / "video-recreation.md"
+VIDEO_SOURCE = ROOT / "scripts" / "prepare_video_source.py"
+TRANSCRIBE = ROOT / "scripts" / "transcribe_video.py"
 FIXED_DRIVER = ROOT / "assets" / "template-driver.wav"
 FIXED_DRIVER_SHA256 = "73c9cc8dde3ee0f4fe0d39b3720bbc4453ab22b3ede2a9068183d0e1c55d3d0b"
 
@@ -50,5 +53,10 @@ require("clone-only" not in SCRIPT, "Clone-only delivery mode must not exist")
 require("package-only" not in SCRIPT, "Secondary package delivery mode must not replace zeroshot")
 require("Return only the final MP4" in SKILL, "SKILL.md must enforce the zeroshot-only delivery contract")
 require("RunningHub has no role after" in WORKFLOW, "Workflow must prohibit RunningHub after template creation")
+require("人物脸部清晰、没有遮挡、完整露出" in SKILL, "Mandatory portrait-quality notice is missing")
+require("Reference-video script" in SKILL, "Independent reference-video capability is missing")
+require(VIDEO_GUIDE.is_file(), "Reference-video acquisition and rewrite guide is missing")
+require(VIDEO_SOURCE.is_file(), "Video source adapter is missing")
+require(TRANSCRIBE.is_file(), "Optional local transcription script is missing")
 
 print("Avatar Forge contract OK: fixed driver -> LycheeTTS through Lab -> v2clone -> zeroshot; only zeroshot MP4 is delivered.")

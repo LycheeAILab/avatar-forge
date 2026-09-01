@@ -1,7 +1,7 @@
 {
   "name": "avatar-forge",
-  "version": "2.0.0",
-  "description": "Create final zeroshot talking-avatar videos with LycheeTTS and protected LycheeAILab services.",
+  "version": "2.1.0",
+  "description": "Transcribe and rewrite reference videos, then create zeroshot talking-avatar videos with LycheeTTS.",
   "author": {
     "name": "LycheeAILab",
     "url": "https://lab.lycheeai.com.cn/"
@@ -18,8 +18,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Avatar Forge",
-    "shortDescription": "Create final zeroshot talking-avatar videos.",
-    "longDescription": "Create an internal motion template with the bundled fixed short audio, generate target speech with LycheeTTS through LycheeAILab, fast-clone the avatar with v2clone, and deliver only the final zeroshot MP4.",
+    "shortDescription": "Rewrite reference videos and create avatar videos.",
+    "longDescription": "Accept an uploaded video or authorized Douyin link, extract and rewrite its spoken copy, then optionally generate LycheeTTS speech and a final zeroshot talking-avatar MP4.",
     "developerName": "LycheeAILab",
     "category": "Creativity",
     "capabilities": [
@@ -30,7 +30,8 @@
     "defaultPrompt": [
       "\u7528\u6211\u7684\u4eba\u7269\u56fe\u7247\u3001\u53c2\u8003\u58f0\u97f3\u548c\u6587\u6848\u751f\u6210\u6700\u7ec8 zeroshot \u6570\u5b57\u4eba\u89c6\u9891\u3002",
       "\u4f7f\u7528\u5df2\u6709\u6570\u5b57\u4eba\u548c\u76ee\u6807\u97f3\u9891\u6267\u884c zeroshot \u63a8\u7406\u3002",
-      "\u514b\u9686\u6388\u6743\u58f0\u97f3\uff0c\u6216\u7528 speaker_id \u5355\u72ec\u751f\u6210\u53e3\u64ad\u97f3\u9891\u3002"
+      "\u514b\u9686\u6388\u6743\u58f0\u97f3\uff0c\u6216\u7528 speaker_id \u5355\u72ec\u751f\u6210\u53e3\u64ad\u97f3\u9891\u3002",
+      "\u4e0b\u8f7d\u6216\u4e0a\u4f20\u53c2\u8003\u89c6\u9891\uff0c\u63d0\u53d6\u6587\u6848\u5e76\u6539\u5199\u6210\u65b0\u53e3\u64ad\u7a3f\u3002"
     ],
     "brandColor": "#7257E8"
   }

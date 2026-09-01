@@ -1,6 +1,6 @@
 ---
 name: avatar-forge-pipeline
-description: Create a final zeroshot talking-avatar video from a portrait, LycheeTTS speaker or finished audio, and script. Use when WorkBuddy should authenticate with LycheeAILab, clone an authorized voice, synthesize target speech, build an internal motion template, fast-clone a digital human, run zeroshot inference, or resume an interrupted avatar job.
+description: Create a final zeroshot talking-avatar video or prepare its script from a reference video. Use when WorkBuddy should accept an uploaded video or authorized Douyin link, transcribe and rewrite spoken copy, authenticate with LycheeAILab, clone an authorized voice, synthesize target speech, build an internal motion template, fast-clone a digital human, run zeroshot inference, or resume an interrupted job.
 ---
 
 # Avatar Forge Pipeline for WorkBuddy
@@ -22,6 +22,7 @@ Return only the final MP4 produced by LycheeAILab zeroshot inference unless the 
 - Zeroshot only: ready `asset_id` + `player_id` + finished WAV/MP3 -> zeroshot MP4.
 - Clone voice: authorized reference audio -> LycheeTTS clone through Lab; normalize `requestId` as `speakerId` when needed.
 - Voice only: existing `speaker_id` + script -> LycheeTTS MP3 through Lab, only when explicitly requested.
+- Reference-video script: uploaded video or authorized Douyin URL -> local video -> original transcript -> rewritten speaking script. Stop unless the user asks to continue.
 
 ## Run from the Skill directory
 
@@ -52,6 +53,41 @@ python "${CODEBUDDY_SKILL_DIR}/scripts/run_pipeline.py" --login-only
 ```
 
 The browser must open `https://lab.lycheeai.com.cn`. The randomized `127.0.0.1` callback is local-only and returns the user's revocable Lab credential to the local process; it is not a web service address.
+
+Before uploading a portrait, show this notice and obtain confirmation:
+
+> 请确认人物脸部清晰、没有遮挡、完整露出，且人物在画面中的比例适中。模糊、遮脸、面部超出画面或人物过大/过小都会影响数字人效果。
+
+Inspect the image when possible. Request a replacement if the face is unclear, obscured, cropped, unusably exposed, or poorly scaled.
+
+## Prepare a script from video
+
+Read `references/video-recreation.md` first. For a local or uploaded video:
+
+The WorkBuddy installer installs `requirements.txt`, including the downloader. If the doctor reports `ytDlp` missing, install that requirements file before continuing; do not require a separate downloader project.
+
+```powershell
+python "${CODEBUDDY_SKILL_DIR}/scripts/prepare_video_source.py" --video "C:/absolute/input/reference.mp4"
+```
+
+For an authorized Douyin URL:
+
+```powershell
+python "${CODEBUDDY_SKILL_DIR}/scripts/prepare_video_source.py" `
+  --douyin-url "https://v.douyin.com/..." `
+  --output "C:/absolute/output/reference.mp4"
+```
+
+If Douyin requires a login session, first ask for permission, then add `--cookies-from-browser edge` (or `chrome`/`firefox`). Never ask the user to paste cookies, and never print, copy, or save cookie values.
+
+Prefer an available trusted transcription tool. For optional fully local transcription:
+
+```powershell
+python -m pip install -r "${CODEBUDDY_SKILL_DIR}/requirements-transcription.txt"
+python "${CODEBUDDY_SKILL_DIR}/scripts/transcribe_video.py" "C:/absolute/input/reference.mp4" --output "C:/absolute/output/transcript-original.txt"
+```
+
+Keep `transcript-original.txt` unchanged and save the rewrite separately as `script-rewritten.txt`. Preserve facts, names, and numbers; rewrite the hook, structure, pacing, transitions, and conclusion. Never fabricate claims. Do not continue into voice or avatar generation unless the user asks.
 
 ## Preserve the fixed stage order
 
@@ -86,3 +122,4 @@ The doctor checks Python, `requests`, package files, and the fixed template-audi
 - Read `references/workflow.md` before changing or debugging stage order.
 - Read `references/api-contracts.md` for Lab request and response fields.
 - Read `references/verification-gates.md` before declaring a generated deliverable complete.
+- Read `references/video-recreation.md` before downloading, transcribing, or rewriting a reference video.
