@@ -5,6 +5,10 @@ description: Create a final zeroshot talking-avatar video or prepare its script 
 
 # Avatar Forge Pipeline for WorkBuddy
 
+## Identify the installed release
+
+Read the adjacent `VERSION` file when asked which release is installed. Report that exact value instead of inferring a version from conversation history or documentation prose. This package is release `2.1.1`.
+
 ## Keep the final-output contract
 
 Return only the final MP4 produced by LycheeAILab zeroshot inference unless the user explicitly requests standalone LycheeTTS audio.

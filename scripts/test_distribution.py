@@ -10,7 +10,7 @@ import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "2.1.0"
+VERSION = "2.1.1"
 ARCHIVE = ROOT / "dist" / f"avatar-forge-workbuddy-{VERSION}.zip"
 
 
@@ -27,6 +27,7 @@ def main() -> int:
         names = set(archive.namelist())
         required = {
             "avatar-forge-pipeline/SKILL.md",
+            "avatar-forge-pipeline/VERSION",
             "avatar-forge-pipeline/requirements.txt",
             "avatar-forge-pipeline/requirements-transcription.txt",
             "avatar-forge-pipeline/scripts/run_pipeline.py",
@@ -43,10 +44,12 @@ def main() -> int:
         require(not any("__pycache__" in name or name.endswith(".pyc") for name in names), "Archive contains cache files")
         require(not any("agents/" in name for name in names), "WorkBuddy archive contains Codex-only agent metadata")
         skill = archive.read("avatar-forge-pipeline/SKILL.md").decode("utf-8")
+        packaged_version = archive.read("avatar-forge-pipeline/VERSION").decode("utf-8").strip()
+        require(packaged_version == VERSION, "WorkBuddy VERSION marker must match release")
         require("${CODEBUDDY_SKILL_DIR}" in skill, "WorkBuddy directory variable is missing")
         require("Return only the final MP4" in skill, "Final zeroshot contract is missing")
         require("RunningHub is allowed only" in skill, "RunningHub boundary is missing")
-    print("Distribution OK: Codex 2.1.0 plus self-contained WorkBuddy Skill package.")
+    print("Distribution OK: Codex 2.1.1 plus self-contained WorkBuddy Skill package.")
     return 0
 
 

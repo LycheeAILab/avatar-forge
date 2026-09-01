@@ -5,6 +5,12 @@ description: Create a final zeroshot talking-avatar video or prepare its script 
 
 # Avatar Forge Pipeline
 
+## Identify the installed release
+
+When asked about the installed or latest available capability, read the adjacent `VERSION` file and report that exact value. Do not infer a version from conversation history, README prose, authentication state, or an older standalone Skill. This package is release `2.1.1`.
+
+If both this plugin Skill and a legacy standalone `~/.codex/skills/avatar-forge-pipeline` are present, stop and explain the name collision. Preserve the legacy directory as a timestamped backup outside the active `skills` directory, then start a new Codex task before validating capabilities.
+
 ## Enforce the delivery contract
 
 Return only the final MP4 produced by LycheeAILab zeroshot inference unless the user explicitly requests standalone LycheeTTS audio.

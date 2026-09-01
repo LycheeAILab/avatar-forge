@@ -13,6 +13,7 @@ WORKFLOW = (ROOT / "references" / "workflow.md").read_text(encoding="utf-8")
 VIDEO_GUIDE = ROOT / "references" / "video-recreation.md"
 VIDEO_SOURCE = ROOT / "scripts" / "prepare_video_source.py"
 TRANSCRIBE = ROOT / "scripts" / "transcribe_video.py"
+VERSION = ROOT / "VERSION"
 FIXED_DRIVER = ROOT / "assets" / "template-driver.wav"
 FIXED_DRIVER_SHA256 = "73c9cc8dde3ee0f4fe0d39b3720bbc4453ab22b3ede2a9068183d0e1c55d3d0b"
 
@@ -58,5 +59,6 @@ require("Reference-video script" in SKILL, "Independent reference-video capabili
 require(VIDEO_GUIDE.is_file(), "Reference-video acquisition and rewrite guide is missing")
 require(VIDEO_SOURCE.is_file(), "Video source adapter is missing")
 require(TRANSCRIBE.is_file(), "Optional local transcription script is missing")
+require(VERSION.read_text(encoding="utf-8").strip() == "2.1.1", "Skill release marker is missing or stale")
 
 print("Avatar Forge contract OK: fixed driver -> LycheeTTS through Lab -> v2clone -> zeroshot; only zeroshot MP4 is delivered.")
