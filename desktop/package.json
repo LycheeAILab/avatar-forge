@@ -1,0 +1,23 @@
+{
+  "name": "avatar-forge-desktop",
+  "productName": "Avatar Forge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Avatar Forge 数字人口播制作客户端",
+  "author": "LycheeAILab",
+  "license": "MIT",
+  "main": "src/main.cjs",
+  "scripts": { "start": "electron .", "preview": "node preview.cjs", "dist": "electron-builder --win nsis --x64 --publish never" },
+  "devDependencies": { "electron": "44.2.0", "electron-builder": "26.15.3" },
+  "dependencies": {"electron-updater":"6.8.3"},
+  "build": {
+    "protocols": [{"name":"Avatar Forge Login","schemes":["cn.com.lycheeai.avatarforge"]}],
+    "publish": [{"provider":"generic","url":"https://prod-lab-1321001571.cos.ap-guangzhou.myqcloud.com/releases/avatar-forge/windows/x64/"}],
+    "appId": "cn.com.lycheeai.avatarforge.preview",
+    "directories": { "output": "release" },
+    "files": ["src/**/*", "package.json"],
+    "extraResources": [{"from":"../LICENSE","to":"LICENSE"},{"from":"../plugins/avatar-forge/skills/avatar-forge-pipeline/assets/template-driver.wav","to":"template-driver.wav"}],
+    "win": { "target": "nsis", "artifactName": "Avatar-Forge-${version}-Windows-${arch}-Setup.${ext}", "signExecutable": false },
+    "nsis": { "oneClick": false, "perMachine": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "deleteAppDataOnUninstall": false }
+  }
+}

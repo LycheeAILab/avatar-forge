@@ -1,0 +1,25 @@
+// Non-spending interaction audit. No real login, uploads or generation requests.
+const {app,BrowserWindow,ipcMain}=require('electron'),path=require('node:path');
+app.setPath('userData',path.join(app.getPath('temp'),'avatar-overall-qa'));
+app.whenReady().then(async()=>{try{
+ let creates=0;
+ ipcMain.handle('avatar:status',()=>({ok:true,data:{user:{id:'qa',displayName:'测试'}}}));
+ ipcMain.handle('avatar:updates',()=>({ok:true,data:{status:'disabled',currentVersion:'qa'}}));
+ ipcMain.handle('avatar:history',()=>({ok:true,data:{items:[],cloud:[]}}));
+ ipcMain.handle('avatar:library',()=>({ok:true,data:{models:[{id:'m',name:'模特',ready:true,status:'ready'}],voices:[{id:'v',name:'音色',ready:true,status:'completed'}]}}));
+ ipcMain.handle('avatar:create',()=>{creates++;return {ok:false,error:'测试拒绝提交'}});
+ const source=process.env.AVATAR_QA_SOURCE||path.join(__dirname,'src');
+ const w=new BrowserWindow({show:false,webPreferences:{preload:path.join(source,'preload.cjs'),sandbox:true,contextIsolation:true}});
+ await w.loadFile(path.join(source,'index.html'));await new Promise(r=>setTimeout(r,100));
+ const js=expression=>w.webContents.executeJavaScript(expression);
+ await js("document.getElementById('simulate').click()");await new Promise(r=>setTimeout(r,50));
+ console.log('empty input handled by IPC result:',await js("!document.getElementById('simulate').disabled&&document.getElementById('toast').textContent==='测试拒绝提交'"));
+ const status={id:'task',status:'processing',stage:2,createdAt:new Date().toISOString()};w.webContents.send('avatar:task',status);await new Promise(r=>setTimeout(r,50));
+ console.log('processing input inert:',await js("document.querySelector('.af-form').inert"));
+ await js("document.getElementById('reset').click()");
+ if(await js("document.getElementById('progress-status').textContent==='尚未开始'"))throw Error('Processing reset cleared state');console.log('PASS processing reset preserves progress');
+ w.webContents.send('avatar:task',{...status,status:'paused'});await new Promise(r=>setTimeout(r,50));
+ console.log('paused form unlocked:',await js("!document.querySelector('.af-form').inert"));
+ console.log('renderer has no Node:',await js("typeof require==='undefined'&&typeof process==='undefined'"));
+ console.log('only mocked create calls:',creates);app.exit(0);
+ }catch(e){console.error(e);app.exit(1)}});
