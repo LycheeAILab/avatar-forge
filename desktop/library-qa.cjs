@@ -3,11 +3,13 @@ app.setPath('userData',path.join(app.getPath('temp'),'avatar-library-qa'));
 app.whenReady().then(async()=>{try{
  ipcMain.handle('avatar:status',()=>({ok:true,data:{user:{id:'test',displayName:'测试账户'}}}));
  ipcMain.handle('avatar:updates',()=>({ok:true,data:{status:'disabled',currentVersion:'dev'}}));
- ipcMain.handle('avatar:library',()=>({ok:true,data:{models:[{id:'m',name:'示例模特',status:'ready',ready:true},{id:'pending',name:'制作中',status:'template_queued',ready:false}],voices:[{id:'v',name:'我的音色',status:'completed',ready:true}]}}));
- ipcMain.handle('avatar:renameAsset',(_,x)=>({ok:true,data:{ok:true}}));
+ let hasPreview=false;
+ ipcMain.handle('avatar:library',()=>({ok:true,data:{models:[{id:'m',name:'示例模特',status:'ready',ready:true},{id:'pending',name:'制作中',status:'template_queued',ready:false}],voices:[{id:'v',name:'我的音色',status:'completed',ready:true,previewUrl:hasPreview?'https://example.com/reference.wav':null}]}}));
+ let renamed=null;ipcMain.handle('avatar:renameAsset',(_,x)=>{renamed=x;return {ok:true,data:{ok:true}}});
  const source=process.env.AVATAR_QA_SOURCE||path.join(__dirname,'src');
- const w=new BrowserWindow({show:false,webPreferences:{preload:path.join(source,'preload.cjs'),sandbox:true,contextIsolation:true}});await w.loadFile(path.join(source,'index.html'));
+ const w=new BrowserWindow({show:false,webPreferences:{offscreen:true,backgroundThrottling:false,preload:path.join(source,'preload.cjs'),sandbox:true,contextIsolation:true}});await w.loadFile(path.join(source,'index.html'));
  const out=path.join(app.getPath('temp'),'avatar-library-qa-images');fs.mkdirSync(out,{recursive:true});
+ if(await w.webContents.executeJavaScript("Boolean(document.querySelector('[data-person=video]'))"))throw Error('Video upload still visible');
  for(const width of [1280,980,390]){w.setContentSize(width,880);await new Promise(r=>setTimeout(r,100));
  const before=await w.webContents.executeJavaScript("document.querySelector('.af-topbar').getBoundingClientRect().height");
  await w.webContents.executeJavaScript("document.querySelector('[data-page=models]').click()");await new Promise(r=>setTimeout(r,150));
@@ -15,9 +17,21 @@ app.whenReady().then(async()=>{try{
  fs.writeFileSync(path.join(out,width+'.png'),(await w.webContents.capturePage()).toPNG());
  await w.webContents.executeJavaScript("document.querySelector('.af-library-actions button').click()");await new Promise(r=>setTimeout(r,150));
  if(!await w.webContents.executeJavaScript("document.getElementById('library').hidden&&document.getElementById('person-drop').hidden&&window.avatarLibrary.selection().modelId==='m'"))throw Error('Selection lost');
+ if(!await w.webContents.executeJavaScript("document.querySelector('.af-asset-select[aria-pressed=true]')?.getAttribute('aria-label')==='选择 示例模特'"))throw Error('Image picker selection missing');
  await w.webContents.executeJavaScript("document.querySelector('[data-page=voices]').click()");await new Promise(r=>setTimeout(r,150));await w.webContents.executeJavaScript("document.querySelector('.af-library-actions button').click()");await new Promise(r=>setTimeout(r,150));
  if(!await w.webContents.executeJavaScript("!document.getElementById('script-section').hidden&&window.avatarLibrary.selection().voiceId==='v'"))throw Error('Voice selection');
+ if(!await w.webContents.executeJavaScript("document.querySelector('.af-voice-play').disabled&&getComputedStyle(document.querySelector('.af-voice-play')).borderRadius==='50%'"))throw Error('Voice circle missing');
+ await new Promise(r=>setTimeout(r,250));fs.writeFileSync(path.join(out,'picker-'+width+'.png'),(await w.webContents.capturePage()).toPNG());
  }
+ await w.webContents.executeJavaScript("document.querySelector('[data-page=models]').click()");await new Promise(r=>setTimeout(r,100));
+ await w.webContents.executeJavaScript("document.querySelector('.af-library-name').value='新的模特名';document.querySelectorAll('.af-library-actions button')[1].click()");await new Promise(r=>setTimeout(r,100));
+ if(renamed?.name!=='新的模特名'||renamed?.kind!=='model')throw Error('Rename failed');
+ await w.webContents.executeJavaScript(`window.Audio=class{constructor(){this.onended=null}async play(){window.previewPlayed=true}pause(){window.previewPaused=true}};void 0`);
+ hasPreview=true;await w.webContents.executeJavaScript("document.querySelector('[data-page=voices]').click()");await new Promise(r=>setTimeout(r,150));
+ await w.webContents.executeJavaScript("document.querySelector('.af-voice-library .af-voice-play').click()");await new Promise(r=>setTimeout(r,50));
+ if(!await w.webContents.executeJavaScript("window.previewPlayed&&document.querySelector('.af-voice-library .af-voice-play').getAttribute('aria-pressed')==='true'"))throw Error('Play failed');
+ await w.webContents.executeJavaScript("document.querySelector('.af-voice-library .af-voice-play').click()");
+ if(!await w.webContents.executeJavaScript("window.previewPaused&&document.querySelector('.af-voice-library .af-voice-play').getAttribute('aria-pressed')==='false'"))throw Error('Pause failed');
  w.webContents.send('avatar:auth',{user:null});await new Promise(r=>setTimeout(r,100));if(!await w.webContents.executeJavaScript("window.avatarLibrary.selection().modelId===''&&document.querySelectorAll('.af-library-card').length===0"))throw Error('Logout data retained');
  console.log('PASS library navigation, selection, disabled states, logout and three sizes; simulated data only');console.log(out);app.exit(0)
  }catch(e){console.error(e);app.exit(1)}});

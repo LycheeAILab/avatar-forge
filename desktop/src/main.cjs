@@ -54,6 +54,7 @@ else{
   handle('library',async()=>{await identity();return client.api('/api/avatar-forge/library')});
   handle('renameAsset',async({kind,id,name,mediaToken})=>{await identity();if(!['model','voice'].includes(kind)||typeof id!=='string')throw Error('资产无效');const file=mediaToken?files.get(mediaToken):null;if(mediaToken&&(!file||file.size>15*1024*1024))throw Error('素材无效');const body=await engine.form({name},file?{media:file.path}:{});return client.api('/api/avatar-forge/library/'+kind+'/'+encodeURIComponent(id),{method:'POST',body})});
   handle('create',async input=>{idle();busy=true;try{
+   if(!['image','saved'].includes(input.person))throw Error('请选择上传图片或已有模特');
    const uid=await identity(),p=files.get(input.personToken),v=files.get(input.voiceToken);
    if(input.person!=='saved'&&(!p||!mime(p.path).startsWith(input.person==='image'?'image/':'video/')||p.size>(input.person==='image'?15:600)*1024*1024))throw Error('请重新选择有效人物素材');
    if(input.voice!=='saved'&&(!v||!mime(v.path).startsWith('audio/')||v.size>(input.voice==='clone'?15:100)*1024*1024))throw Error('请重新选择有效声音素材');
