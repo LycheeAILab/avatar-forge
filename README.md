@@ -22,11 +22,11 @@
 
 ## 🖥️ Windows 桌面端
 
-[下载 Avatar Forge 1.0.2 · Windows x64](https://github.com/LycheeAILab/avatar-forge/releases/download/desktop-v1.0.2/Avatar-Forge-1.0.2-Windows-x64-Setup.exe)
+[下载 Avatar Forge 1.0.3 · Windows x64](https://github.com/LycheeAILab/avatar-forge/releases/download/desktop-v1.0.3/Avatar-Forge-1.0.3-Windows-x64-Setup.exe)
 
 [百度网盘下载 · 旧版 1.0.0 · Windows x64](https://pan.baidu.com/s/1SmyeFiaWbUY1g7zKQdy0kQ?pwd=tcud) · 提取码：`tcud`
 
-使用 Lab 账号登录，管理可复用的数字人和音色，输入口播稿制作并导出成片。桌面端独立版本为 1.0.2，Skill 版本保持 2.2.0。当前 Windows 安装包尚未进行代码签名。
+使用 Lab 账号登录，在音色管理中上传参考音频克隆新音色，管理可复用的数字人和音色，输入口播稿制作并导出成片。桌面端独立版本为 1.0.3，Skill 版本保持 2.2.0。左下角更新面板显示下载进度，完成后可重启安装。当前 Windows 安装包尚未进行代码签名。
 
 ## ✨ 核心能力
 

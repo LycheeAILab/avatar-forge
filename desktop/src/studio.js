@@ -1,10 +1,5 @@
 if(window.avatarStudio){
  const api=window.avatarStudio;
- let updateState={status:'idle'};
- const updateButton=document.getElementById('update');
- function displayUpdate(state){updateState=state;updateButton.title=({idle:'检查更新',checking:'正在检查',downloading:'正在下载 '+(state.percent||0)+'%',ready:'更新已下载，点击安装',current:'当前已是最新版本',error:'更新失败，点击重试',disabled:'测试版暂不启用自动更新'})[state.status];document.querySelector('.af-version>span').textContent=state.currentVersion||'开发版'}
- api.onUpdate(displayUpdate);api.updates().then(r=>{if(r.ok)displayUpdate(r.data)});
- updateButton.onclick=async()=>{try{if(updateState.status==='ready'){if(confirm('重启并安装更新？'))check(await api.installUpdate())}else{displayUpdate(check(await api.checkUpdates()));message(updateButton.title)}}catch(e){message(e.message)}};
  let personToken=null,voiceToken=null,active=null;
  document.querySelector('.af-preview-tag').textContent='Lab 云端制作';
  document.querySelector('.af-local-note').textContent='Avatar Forge · Windows';

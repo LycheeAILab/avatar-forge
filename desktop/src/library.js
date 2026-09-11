@@ -8,6 +8,15 @@
  const heading=el('div','af-heading'),title=el('h1','','模特管理'),refresh=el('button','af-secondary','刷新');heading.append(title,refresh);
  const hint=el('p','af-hint','最近 200 项 · 已克隆资产可重复使用，只修改文案不必重新克隆。');
  const grid=el('div','af-library-grid');section.append(heading,hint,grid);document.querySelector('.af-main').append(section);
+ const cloneForm=el('form','af-clone-form');cloneForm.hidden=true;
+ cloneForm.innerHTML='<h2>克隆新音色</h2><label>音色名称<input id="clone-name" maxlength="80" required placeholder="给音色起个名字"></label><label>参考音频<input id="clone-file" type="file" accept="audio/wav,audio/mpeg,audio/mp4,audio/flac,audio/ogg" required></label><p class="af-hint">上传清晰的单人声音，不超过 15MB。克隆后可反复用于不同文案。</p><label class="af-consent"><input id="clone-consent" type="checkbox" required>我已获得参考声音的使用授权</label><button type="submit" class="af-secondary" id="clone-submit">开始克隆</button><p id="clone-status" role="status" class="af-hint"></p>';
+ hint.after(cloneForm);
+ let cloning=false;
+ cloneForm.onsubmit=async event=>{event.preventDefault();if(cloning)return;const file=$('clone-file').files[0];if(!file||file.size>15*1024*1024)return toast('请选择不超过15MB的参考音频');cloning=true;$('clone-submit').disabled=true;let submitted=false;
+  try{if(!api?.cloneVoice)throw Error('请在桌面客户端登录后克隆音色');const token=check(await api.register(file)).token;const input={name:$('clone-name').value.trim(),mediaToken:token,consent:$('clone-consent').checked};$('clone-status').textContent='正在提交声音克隆，请勿重复提交…';submitted=true;const result=check(await api.cloneVoice(input));cloneForm.reset();$('clone-status').textContent=result.warning||'音色已提交，完成后即可在制作页选择。';await load()}
+  catch(e){$('clone-status').textContent=e.message+(submitted?'；请先刷新音色列表确认结果，避免重复克隆。':'')}
+  finally{cloning=false;$('clone-submit').disabled=false}
+ };
  const selectors={},pickers={};
  let preview=null;
  function stopPreview(){if(preview){preview.pause();preview=null}document.querySelectorAll('.af-voice-play').forEach(b=>{b.textContent='▶';b.setAttribute('aria-pressed','false')})}
@@ -33,7 +42,7 @@
  function sync(){stopPreview();for(const kind of ['person','voice']){const saved=document.querySelector(`[data-${kind}].is-selected`)?.dataset[kind]==='saved';selectors[kind].hidden=true;pickers[kind].hidden=!saved;$(kind+'-drop').hidden=saved;}}
  $('reset').addEventListener('click',sync);
  let tab='models';
- function show(name){stopPreview();page(name);section.hidden=!['models','voices'].includes(name);if(!section.hidden){tab=name;title.textContent=name==='models'?'模特管理':'音色管理';$('breadcrumb').textContent=title.textContent;void load()}}
+ function show(name){stopPreview();page(name);section.hidden=!['models','voices'].includes(name);cloneForm.hidden=name!=='voices';if(!section.hidden){tab=name;title.textContent=name==='models'?'模特管理':'音色管理';$('breadcrumb').textContent=title.textContent;void load()}}
  for(const [name,label]of [['models','模特管理'],['voices','音色管理']]){const button=el('button','af-nav',label);button.dataset.page=name;nav.append(button)}
  document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>show(b.dataset.page));
  $('back-studio').onclick=()=>show('studio');

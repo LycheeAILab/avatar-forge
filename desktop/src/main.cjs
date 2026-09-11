@@ -3,6 +3,7 @@ const {randomUUID}=require('node:crypto');
 const {validateCreation}=require('./creation-validation.cjs');
 const {Pipeline,mime}=require('./pipeline.cjs');
 const {HiddenModels}=require('./hidden-models.cjs');
+const {cloneVoice}=require('./voice-library.cjs');
 const {Updates}=require('./updates.cjs');
 const {autoUpdater}=require('electron-updater');
 protocol.registerSchemesAsPrivileged([{scheme:'avatar-media',privileges:{standard:true,secure:true,supportFetchAPI:true,stream:true}}]);
@@ -65,6 +66,9 @@ else{
    }finally{busy=false}
   });
   handle('renameAsset',async({kind,id,name,mediaToken})=>{await identity();if(!['model','voice'].includes(kind)||typeof id!=='string')throw Error('资产无效');const file=mediaToken?files.get(mediaToken):null;if(mediaToken&&(!file||file.size>15*1024*1024))throw Error('素材无效');const body=await engine.form({name},file?{media:file.path}:{});return client.api('/api/avatar-forge/library/'+kind+'/'+encodeURIComponent(id),{method:'POST',body})});
+  handle('cloneVoice',async input=>{idle();busy=true;try{
+   return await cloneVoice({input,file:files.get(input?.mediaToken),identity,client,form:(...args)=>engine.form(...args)});
+  }finally{busy=false}});
   handle('create',async input=>{idle();busy=true;try{
    validateCreation(input);
    const uid=await identity(),p=files.get(input.personToken),v=files.get(input.voiceToken);
