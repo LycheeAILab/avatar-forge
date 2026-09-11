@@ -23,4 +23,6 @@
 .af-voice-play:disabled{opacity:.4;cursor:default}
 .af-asset-select:focus-visible,.af-voice-play:focus-visible{outline:2px solid #3974ed;outline-offset:3px}
 .af-voice-library{text-align:center}
+.af-model-delete{align-self:flex-start;color:#bd4646;font-size:12px;padding:6px 0}
+.af-model-delete:hover{color:#982626;text-decoration:underline}
 @media(max-width:600px){.af-library{padding:24px 20px}.af-library-grid{grid-template-columns:minmax(0,1fr)}}

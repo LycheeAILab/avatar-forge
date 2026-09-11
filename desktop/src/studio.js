@@ -29,6 +29,10 @@ if(window.avatarStudio){
  }
  api.onChange(show);
  button.onclick=async()=>{button.disabled=true;try{const selection=window.avatarLibrary?.selection()||{};let cover;
+  if(document.querySelector('[data-person].is-selected').dataset.person==='saved'&&!selection.modelId)throw Error('请选择已有模特');
+  if(!selection.voiceId)throw Error('请选择已有音色');
+  if(!document.getElementById('script').value.trim())throw Error('请填写口播文案');
+  if(!document.getElementById('consent').checked)throw Error('请确认素材使用授权');
   if(document.querySelector('[data-person].is-selected').dataset.person==='video'&&personUrl){const v=document.createElement('video');v.preload='auto';v.muted=true;try{await new Promise((resolve,reject)=>{const timeout=setTimeout(()=>reject(Error('读取原视频首帧超时，请检查视频')),15000);v.onloadeddata=()=>{clearTimeout(timeout);resolve()};v.onerror=()=>{clearTimeout(timeout);reject(Error('原视频无法读取'))};v.src=personUrl});const canvas=document.createElement('canvas');canvas.width=480;canvas.height=Math.min(1920,Math.round(480*v.videoHeight/v.videoWidth));canvas.getContext('2d').drawImage(v,0,0,canvas.width,canvas.height);cover=canvas.toDataURL('image/png')}finally{v.removeAttribute('src');v.load()}}
   const data=check(await api.create({personToken,voiceToken,person:document.querySelector('[data-person].is-selected').dataset.person,voice:document.querySelector('[data-voice].is-selected').dataset.voice,script:document.getElementById('script').value,consent:document.getElementById('consent').checked,...selection,cover}));show(data)}catch(e){message(e.message)}finally{if(active?.status!=='processing')button.disabled=false}};
  pause.onclick=async()=>{try{message(check(await api.pause()).message)}catch(e){message(e.message)}};

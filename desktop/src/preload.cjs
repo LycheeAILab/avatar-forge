@@ -1,6 +1,7 @@
 const {contextBridge,ipcRenderer,webUtils}=require('electron');
 contextBridge.exposeInMainWorld('avatarStudio',{
  library:()=>ipcRenderer.invoke('avatar:library'),
+ hideModel:id=>ipcRenderer.invoke('avatar:hideModel',id),
  renameAsset:input=>ipcRenderer.invoke('avatar:renameAsset',input),
  updates:()=>ipcRenderer.invoke('avatar:updates'),
  checkUpdates:()=>ipcRenderer.invoke('avatar:checkUpdates'),

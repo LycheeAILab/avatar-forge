@@ -2,6 +2,7 @@ const fs=require('node:fs/promises'),path=require('node:path');
 const {randomUUID,createHash}=require('node:crypto');
 const {openAsBlob}=require('node:fs');
 const mime=file=>({'.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.mp4':'video/mp4','.mov':'video/quicktime','.wav':'audio/wav','.mp3':'audio/mpeg'})[path.extname(file).toLowerCase()];
+const {validateCreation}=require('./creation-validation.cjs');
 const idPattern=/^[a-zA-Z0-9_-]{1,100}$/;
 class Pipeline{
  constructor({client,root,driver,notify,interval=5000,download,driverHash='73c9cc8dde3ee0f4fe0d39b3720bbc4453ab22b3ede2a9068183d0e1c55d3d0b'}){Object.assign(this,{client,root,driver,notify,interval,driverHash});this.running=false;this.stopped=false;this.download=download||this.fetchMedia.bind(this)}
@@ -9,7 +10,7 @@ class Pipeline{
  async save(s){const file=path.join(this.dir(s.userId,s.id),'state.json');await fs.writeFile(file+'.tmp',JSON.stringify(s));await fs.rename(file+'.tmp',file);this.notify(this.public(s))}
  public(s){return {id:s.id,title:s.script?.slice(0,40)||'数字人口播',status:s.status,stage:s.stage,createdAt:s.createdAt,error:s.error||null,libraryWarning:s.libraryWarning||null,completed:s.status==='completed'}}
  async list(user){const dir=this.dir(user,'_');const parent=path.dirname(dir);const entries=await fs.readdir(parent).catch(()=>[]);const items=[];for(const id of entries){try{const s=JSON.parse(await fs.readFile(path.join(this.dir(user,id),'state.json'),'utf8'));if(s.userId===user&&s.id===id)items.push(this.public(s))}catch{}}return items.sort((a,b)=>b.createdAt.localeCompare(a.createdAt))}
- async create(user,input){if(this.running)throw Error('已有任务运行中');if(!['image','saved'].includes(input.person)||!['clone','audio','saved'].includes(input.voice)||input.consent!==true)throw Error('请确认素材使用授权');if(input.voice!=='audio'&&(!input.script?.trim()||input.script.length>20000))throw Error('请填写文案（不超过20000字）');
+ async create(user,input){if(this.running)throw Error('已有任务运行中');validateCreation(input);
   const model=input.person==='saved'?await this.client.api('/api/avatar-forge/library/model/'+encodeURIComponent(input.modelId)):null;
   const voice=input.voice==='saved'?await this.client.api('/api/avatar-forge/library/voice/'+encodeURIComponent(input.voiceId)):null;
   if(model&&(!model.assetId||!model.playerId)||voice&&!voice.speakerId)throw Error('所选资产尚未就绪');

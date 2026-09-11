@@ -13,7 +13,13 @@ app.whenReady().then(async()=>{try{
  await w.loadFile(path.join(source,'index.html'));await new Promise(r=>setTimeout(r,100));
  const js=expression=>w.webContents.executeJavaScript(expression);
  await js("document.getElementById('simulate').click()");await new Promise(r=>setTimeout(r,50));
- console.log('empty input handled by IPC result:',await js("!document.getElementById('simulate').disabled&&document.getElementById('toast').textContent==='测试拒绝提交'"));
+ if(!await js("!document.getElementById('simulate').disabled&&document.getElementById('toast').textContent==='请选择已有音色'"))throw Error('Missing voice validation');
+ await js("document.querySelector('[data-person=saved]').click()");await new Promise(r=>setTimeout(r,100));
+ await js("document.getElementById('simulate').click()");await new Promise(r=>setTimeout(r,50));
+ if(!await js("document.getElementById('toast').textContent==='请选择已有模特'"))throw Error('Missing model validation');
+ if(creates!==0)throw Error('Incomplete selection reached IPC');
+ if(await js("Boolean(document.querySelector('[data-voice=audio], [data-voice=clone]'))"))throw Error('Removed voice inputs still visible');
+ console.log('PASS incomplete selections show friendly prompts without IPC');
  const status={id:'task',status:'processing',stage:2,createdAt:new Date().toISOString()};w.webContents.send('avatar:task',status);await new Promise(r=>setTimeout(r,50));
  console.log('processing input inert:',await js("document.querySelector('.af-form').inert"));
  await js("document.getElementById('reset').click()");

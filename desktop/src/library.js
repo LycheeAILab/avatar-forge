@@ -13,7 +13,7 @@
  function stopPreview(){if(preview){preview.pause();preview=null}document.querySelectorAll('.af-voice-play').forEach(b=>{b.textContent='▶';b.setAttribute('aria-pressed','false')})}
  function playButton(item){const b=el('button','af-voice-play','▶');b.type='button';b.disabled=!item.previewUrl;b.setAttribute('aria-label',item.previewUrl?'试听 '+item.name:'暂无试听音频');b.setAttribute('aria-pressed','false');b.onclick=async()=>{const playing=b.getAttribute('aria-pressed')==='true';stopPreview();if(playing)return;const audio=new Audio(item.previewUrl);preview=audio;b.textContent='Ⅱ';b.setAttribute('aria-pressed','true');audio.onended=()=>{if(preview===audio)stopPreview()};try{await audio.play()}catch{if(preview===audio)stopPreview();toast('试听加载失败，请刷新后重试')}};return b}
  for(const [kind,label]of [['person','已有模特'],['voice','已有音色']]){
-  const group=document.querySelector(`[data-${kind}]`).parentElement;
+  const group=kind==='voice'?document.querySelector('[aria-label="声音用途"]'):document.querySelector(`[data-${kind}]`).parentElement;
   const button=el('button','',label);button.dataset[kind]='saved';button.setAttribute('aria-pressed','false');group.prepend(button);
   const select=el('select','af-library-select');select.setAttribute('aria-label',label);select.hidden=true;group.after(select);selectors[kind]=select;
   const picker=el('div','af-asset-picker');picker.hidden=true;picker.setAttribute('aria-label',label);select.after(picker);pickers[kind]=picker;
@@ -68,7 +68,13 @@
    const media=el('input');media.type='file';media.hidden=true;media.accept=tab==='models'?'image/png,image/jpeg,image/webp':'audio/wav,audio/mpeg';
    const replace=el('button','af-text-button',tab==='models'?'设置原图封面':'设置参考音频');replace.onclick=()=>media.click();
    media.onchange=async()=>{if(!media.files[0])return;replace.disabled=true;try{const token=check(await api.register(media.files[0])).token;check(await api.renameAsset({kind:tab==='models'?'model':'voice',id:item.id,name:name.value,mediaToken:token}));await load()}catch(e){toast(e.message)}finally{replace.disabled=false}};
-   actions.append(use,save);card.append(name,status,actions,replace,media);grid.append(card);
+   actions.append(use,save);card.append(name,status,actions,replace,media);
+   if(tab==='models'){
+    const remove=el('button','af-model-delete','删除模特');remove.type='button';
+    remove.onclick=async()=>{remove.disabled=true;try{const result=check(await api.hideModel(item.id));if(!result.hidden)return;data.models=data.models.filter(model=>model.id!==item.id);if(selectors.person.value===item.id){selectors.person.value='';selectors.person.dispatchEvent(new Event('change'))}render();toast('模特已从列表移除')}catch(e){toast(e.message)}finally{remove.disabled=false}};
+    card.append(remove);
+   }
+   grid.append(card);
   }
   if(!data[tab].length)grid.append(el('p','af-hint',tab==='models'?'还没有模特。完成一次制作后，模特会自动保留在这里。':'还没有音色。克隆成功后，音色会自动保留在这里。'));
  }
@@ -76,6 +82,7 @@
  refresh.onclick=load;
  window.avatarLibrary={selection:()=>({modelId:selectors.person.value,voiceId:selectors.voice.value})};
  window.avatarAuth?.onChange(value=>{if(Object.hasOwn(value,'user')){revision++;data={models:[],voices:[]};render();for(const s of Object.values(selectors))s.value='';if(!value.user){$('portrait').removeAttribute('src');$('portrait').hidden=true;$('voice-player').pause();$('voice-player').removeAttribute('src');$('voice-player').hidden=true}}});
+ setVoice('saved');sync();
  render();
  window.avatarAuth?.onChange(()=>stopPreview());
  window.addEventListener('beforeunload',stopPreview);

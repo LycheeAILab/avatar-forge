@@ -1,6 +1,8 @@
 const {app,BrowserWindow,nativeTheme,ipcMain,safeStorage,shell,dialog,protocol,net}=require('electron');
 const {randomUUID}=require('node:crypto');
+const {validateCreation}=require('./creation-validation.cjs');
 const {Pipeline,mime}=require('./pipeline.cjs');
+const {HiddenModels}=require('./hidden-models.cjs');
 const {Updates}=require('./updates.cjs');
 const {autoUpdater}=require('electron-updater');
 protocol.registerSchemesAsPrivileged([{scheme:'avatar-media',privileges:{standard:true,secure:true,supportFetchAPI:true,stream:true}}]);
@@ -26,6 +28,7 @@ else{
  app.whenReady().then(async()=>{
   nativeTheme.themeSource='light';
   const root=app.getPath('userData');await fs.mkdir(root,{recursive:true});const file=path.join(root,'desktop-session.enc');
+  const hiddenModels=new HiddenModels(root);
   const storage={
    async read(){try{if(!safeStorage.isEncryptionAvailable())return null;const saved=JSON.parse(safeStorage.decryptString(await fs.readFile(file)));return saved.origin===base&&saved.clientId===CLIENT?saved.tokens:null}catch{return null}},
    async write(tokens){if(!safeStorage.isEncryptionAvailable())throw Error('Windows安全存储不可用，无法保存登录');await fs.writeFile(file+'.tmp',safeStorage.encryptString(JSON.stringify({origin:base,clientId:CLIENT,tokens})));await fs.rename(file+'.tmp',file)},
@@ -51,11 +54,21 @@ else{
   handle('login',async()=>{idle();if(pending&&pending.expiresAt>Date.now())throw Error('请在已打开的浏览器完成授权，或稍后重新登录');pending=beginLogin(base,os.hostname());try{await shell.openExternal(pending.url)}catch(error){pending=null;throw error}return {message:'请在系统浏览器完成 Lab 登录与授权'}});
   handle('logout',async()=>{idle();busy=true;pending=null;try{await client.logout();user=null;files.clear();notify({user:null});return {user:null}}finally{busy=false}});
   handle('register',async file=>{if(typeof file!=='string'||!path.isAbsolute(file)||!mime(file))throw Error('素材格式不支持');const stat=await fs.stat(file);if(!stat.isFile()||!stat.size||stat.size>600*1024*1024)throw Error('素材大小无效');const token=randomUUID();files.set(token,{path:file,size:stat.size});return {token}});
-  handle('library',async()=>{await identity();return client.api('/api/avatar-forge/library')});
+  handle('library',async()=>{const uid=await identity();const data=await client.api('/api/avatar-forge/library');const hidden=await hiddenModels.ids(uid);return {...data,models:data.models.filter(item=>!hidden.has(item.id))}});
+  handle('hideModel',async id=>{
+   idle();busy=true;try{
+    if(typeof id!=='string'||!id||id.length>191)throw Error('请选择要删除的模特');
+    const uid=await identity();const data=await client.api('/api/avatar-forge/library');const model=data.models.find(item=>item.id===id);if(!model)throw Error('模特不存在，请刷新列表');
+    const answer=await dialog.showMessageBox(win,{type:'warning',title:'删除模特',message:'确定删除“'+model.name+'”？',detail:'删除后，该模特将从此客户端的管理和选择列表中移除，无法在客户端找回。云端素材与已生成的视频不会删除。',buttons:['取消','删除模特'],defaultId:0,cancelId:0,noLink:true});
+    if(answer.response!==1)return {hidden:false};
+    await hiddenModels.hide(uid,id);return {hidden:true};
+   }finally{busy=false}
+  });
   handle('renameAsset',async({kind,id,name,mediaToken})=>{await identity();if(!['model','voice'].includes(kind)||typeof id!=='string')throw Error('资产无效');const file=mediaToken?files.get(mediaToken):null;if(mediaToken&&(!file||file.size>15*1024*1024))throw Error('素材无效');const body=await engine.form({name},file?{media:file.path}:{});return client.api('/api/avatar-forge/library/'+kind+'/'+encodeURIComponent(id),{method:'POST',body})});
   handle('create',async input=>{idle();busy=true;try{
-   if(!['image','saved'].includes(input.person))throw Error('请选择上传图片或已有模特');
+   validateCreation(input);
    const uid=await identity(),p=files.get(input.personToken),v=files.get(input.voiceToken);
+   if(input.person==='saved'&&(await hiddenModels.ids(uid)).has(input.modelId))throw Error('该模特已删除，请选择其他模特');
    if(input.person!=='saved'&&(!p||!mime(p.path).startsWith(input.person==='image'?'image/':'video/')||p.size>(input.person==='image'?15:600)*1024*1024))throw Error('请重新选择有效人物素材');
    if(input.voice!=='saved'&&(!v||!mime(v.path).startsWith('audio/')||v.size>(input.voice==='clone'?15:100)*1024*1024))throw Error('请重新选择有效声音素材');
    let coverPath;

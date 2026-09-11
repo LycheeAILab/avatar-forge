@@ -6,6 +6,7 @@ app.whenReady().then(async()=>{try{
  let hasPreview=false;
  ipcMain.handle('avatar:library',()=>({ok:true,data:{models:[{id:'m',name:'示例模特',status:'ready',ready:true},{id:'pending',name:'制作中',status:'template_queued',ready:false}],voices:[{id:'v',name:'我的音色',status:'completed',ready:true,previewUrl:hasPreview?'https://example.com/reference.wav':null}]}}));
  let renamed=null;ipcMain.handle('avatar:renameAsset',(_,x)=>{renamed=x;return {ok:true,data:{ok:true}}});
+ let confirmDelete=false;ipcMain.handle('avatar:hideModel',()=>({ok:true,data:{hidden:confirmDelete}}));
  const source=process.env.AVATAR_QA_SOURCE||path.join(__dirname,'src');
  const w=new BrowserWindow({show:false,webPreferences:{offscreen:true,backgroundThrottling:false,preload:path.join(source,'preload.cjs'),sandbox:true,contextIsolation:true}});await w.loadFile(path.join(source,'index.html'));
  const out=path.join(app.getPath('temp'),'avatar-library-qa-images');fs.mkdirSync(out,{recursive:true});
@@ -33,5 +34,11 @@ app.whenReady().then(async()=>{try{
  await w.webContents.executeJavaScript("document.querySelector('.af-voice-library .af-voice-play').click()");
  if(!await w.webContents.executeJavaScript("window.previewPaused&&document.querySelector('.af-voice-library .af-voice-play').getAttribute('aria-pressed')==='false'"))throw Error('Pause failed');
  w.webContents.send('avatar:auth',{user:null});await new Promise(r=>setTimeout(r,100));if(!await w.webContents.executeJavaScript("window.avatarLibrary.selection().modelId===''&&document.querySelectorAll('.af-library-card').length===0"))throw Error('Logout data retained');
- console.log('PASS library navigation, selection, disabled states, logout and three sizes; simulated data only');console.log(out);app.exit(0)
+ await w.webContents.executeJavaScript("document.querySelector('[data-page=models]').click()");await new Promise(r=>setTimeout(r,100));
+ await w.webContents.executeJavaScript("document.querySelector('.af-model-delete').click()");await new Promise(r=>setTimeout(r,100));
+ if(await w.webContents.executeJavaScript("document.querySelectorAll('.af-library-card').length")!==2)throw Error('Cancel deleted model');
+ confirmDelete=true;await w.webContents.executeJavaScript("document.querySelector('.af-model-delete').click()");await new Promise(r=>setTimeout(r,100));
+ if(await w.webContents.executeJavaScript("document.querySelectorAll('.af-library-card').length")!==1)throw Error('Confirmed deletion failed');
+ if(await w.webContents.executeJavaScript("window.avatarLibrary.selection().modelId")!=='')throw Error('Deleted selection retained');
+ console.log('PASS library navigation, selection, rename, audition, delete/cancel, logout and three sizes; simulated data only');console.log(out);app.exit(0)
  }catch(e){console.error(e);app.exit(1)}});
