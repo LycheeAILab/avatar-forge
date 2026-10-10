@@ -2,6 +2,8 @@
 
 Do not claim complete/avatar-only success until every applicable gate passes:
 
+Person-video mode replaces gates 3–5 with: MP4 is FFprobe-readable, direct clone uses that file, and no template request/query/download occurs. Gate 11 applies only to generated internal templates; the uploaded source must remain unchanged. Confirm the returned assetId is persisted and supplied to final inference. Final audio/video must not exceed Lab's 300-second limit.
+
 1. Confirm inputs exist and the user is authorized to use them.
 2. Confirm Lab authentication without exposing credentials.
 3. Confirm the template request used the bundled fixed `template-driver.wav`; reject a missing or hash-mismatched asset.

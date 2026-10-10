@@ -7,6 +7,7 @@ import argparse
 from hashlib import sha256
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
+import math
 import os
 import re
 import secrets
@@ -31,6 +32,35 @@ FIXED_TEMPLATE_DRIVER_SHA256 = "73c9cc8dde3ee0f4fe0d39b3720bbc4453ab22b3ede2a906
 
 class PipelineError(RuntimeError):
     pass
+
+
+def validate_video_input(path: Path) -> None:
+    if path.suffix.lower() != ".mp4" or not path.is_file() or not 0 < path.stat().st_size <= 100 * 1024 * 1024:
+        raise PipelineError("人物视频必须为非空 MP4，文件大小不能超过100 MB")
+    try:
+        result = subprocess.run(["ffprobe", "-v", "error", "-show_streams", "-show_format", "-of", "json", str(path.resolve())], capture_output=True, text=True, timeout=30, check=True)
+        media = json.loads(result.stdout)
+        duration = float(media.get("format", {}).get("duration", 0))
+        streams = [s for s in media.get("streams", []) if s.get("codec_type") == "video" and not s.get("disposition", {}).get("attached_pic")]
+        if not streams or not math.isfinite(duration) or duration <= 0:
+            raise ValueError("invalid video")
+        if duration > 120:
+            raise PipelineError("人物视频素材最长2分钟，请提供不超过120秒的视频；不会自动截断")
+        for stream in streams:
+            width, height = int(stream.get("width", 0)), int(stream.get("height", 0))
+            if min(width, height) <= 0:
+                raise ValueError("invalid dimensions")
+            if max(width, height) > 1920 or min(width, height) > 1080:
+                raise PipelineError("人物视频分辨率不能超过1080p（横屏1920×1080，竖屏1080×1920）")
+            for key in ("avg_frame_rate", "r_frame_rate"):
+                numerator, denominator = stream.get(key, "0/0").split("/")
+                fps = float(numerator) / float(denominator)
+                if not math.isfinite(fps) or fps <= 0:
+                    raise ValueError("invalid frame rate")
+                if fps > 25:
+                    raise PipelineError("人物视频帧率不能超过25fps，请转换后重试")
+    except (OSError, ValueError, ZeroDivisionError, subprocess.SubprocessError) as exc:
+        raise PipelineError("Cannot validate person video. Install ffprobe and supply a readable MP4 with a video stream.") from exc
 
 
 def media_type(path: Path) -> str:
@@ -227,7 +257,9 @@ def poll_digital(session: requests.Session, base_url: str, request_id: str, stag
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-url", default=os.environ.get("LYCHEE_LAB_URL", DEFAULT_BASE_URL))
-    parser.add_argument("--image", type=Path)
+    source = parser.add_mutually_exclusive_group()
+    source.add_argument("--image", type=Path)
+    source.add_argument("--video", type=Path, help="Authorized person MP4; fast-clone directly without RunningHub")
     parser.add_argument("--voice", type=Path)
     parser.add_argument("--audio", type=Path)
     parser.add_argument("--script-file", type=Path)
@@ -309,6 +341,15 @@ def generate_lychee_voice_audio(
 
 def main() -> int:
     args = parse_args()
+    if args.video:
+        if args.login_only or args.clone_voice or args.voice_only or args.infer_only:
+            raise PipelineError("--video is for complete or --avatar-only workflows")
+        if args.video.resolve() == args.output.resolve():
+            raise PipelineError("Choose an output path different from the source video")
+        workspace_path = args.output.parent / ".avatar-forge" / args.output.stem
+        if args.video.resolve().is_relative_to(workspace_path.resolve()):
+            raise PipelineError("Move source video outside the generated recovery directory")
+        validate_video_input(args.video)
     base_url = args.base_url.rstrip("/")
     session = authorized_session(base_url, args.force_login)
     if args.login_only:
@@ -355,29 +396,30 @@ def main() -> int:
         print(f"Saved zeroshot video: {args.output}")
         return 0
 
-    if args.image is None or not args.image.is_file():
-        raise PipelineError("A portrait --image is required")
+    visual_source = args.video or args.image
+    if visual_source is None or not visual_source.is_file():
+        raise PipelineError("A portrait --image or person --video is required")
     driver_audio = FIXED_TEMPLATE_DRIVER
-    if not driver_audio.is_file():
+    if not args.video and not driver_audio.is_file():
         raise PipelineError("The bundled fixed template-driving audio is missing")
-    if file_hash(driver_audio) != FIXED_TEMPLATE_DRIVER_SHA256:
+    if not args.video and file_hash(driver_audio) != FIXED_TEMPLATE_DRIVER_SHA256:
         raise PipelineError("The bundled fixed template-driving audio failed its integrity check")
     if args.avatar_only:
         if args.audio is None or not args.audio.is_file():
-            raise PipelineError("--avatar-only requires --image and final --audio")
+            raise PipelineError("--avatar-only requires --image or --video and final --audio")
         target_audio = args.audio
         script = ""
-        fingerprint_inputs = [args.image, driver_audio, target_audio]
+        fingerprint_inputs = [visual_source, *([] if args.video else [driver_audio]), target_audio]
     else:
         if args.script_file is None or not args.script_file.is_file():
-            raise PipelineError("Complete workflow requires --image and --script-file")
+            raise PipelineError("Complete workflow requires --image or --video and --script-file")
         if not args.speaker_id and (args.voice is None or not args.voice.is_file()):
             raise PipelineError("Complete workflow also requires either --speaker-id or a reference --voice")
         target_audio = None
         script = args.script_file.read_text(encoding="utf-8").strip()
         if not script:
             raise PipelineError("Script text is empty")
-        fingerprint_inputs = [args.image, driver_audio]
+        fingerprint_inputs = [visual_source, *([] if args.video else [driver_audio])]
         if not args.speaker_id:
             assert args.voice is not None
             fingerprint_inputs.append(args.voice)
@@ -393,6 +435,8 @@ def main() -> int:
         sort_keys=True,
     )
     fingerprint = workflow_fingerprint(fingerprint_inputs, fingerprint_text)
+    if args.video:
+        fingerprint = sha256(("person-video:" + fingerprint).encode()).hexdigest()
     state: dict = {}
     if state_file.is_file():
         state = json.loads(state_file.read_text(encoding="utf-8"))
@@ -400,7 +444,7 @@ def main() -> int:
             raise PipelineError("Recovery state belongs to different inputs. Choose a different --output or explicitly pass --reset-state.")
     state.setdefault("fingerprint", fingerprint)
     voice_stages = (["lychee-voice-clone"] if not args.avatar_only and not args.speaker_id else []) + (["lychee-voice-target-speech"] if not args.avatar_only else ["existing-target-speech"])
-    state.setdefault("flow", ["internal-template", *voice_stages, "v2clone", "zeroshot"])
+    state.setdefault("flow", ["person-video" if args.video else "internal-template", *voice_stages, "v2clone", "zeroshot"])
     state["finalOutputType"] = "zeroshot-mp4"
 
     def save_state() -> None:
@@ -409,7 +453,7 @@ def main() -> int:
     save_state()
 
     # RunningHub is isolated to this internal template stage. Its result is never returned to the user.
-    if not state.get("templateTaskId"):
+    if not args.video and not state.get("templateTaskId"):
         print("Preparing internal motion template", flush=True)
         with args.image.open("rb") as image, driver_audio.open("rb") as audio:
             template_submit = require_json(session.post(
@@ -424,8 +468,8 @@ def main() -> int:
         state["templateTaskId"] = template_submit["taskId"]
         save_state()
 
-    template_file = workspace / "internal-template.mp4"
-    if not state.get("cloneRequestId"):
+    template_file = args.video or workspace / "internal-template.mp4"
+    if not args.video and not state.get("cloneRequestId"):
         if not state.get("templateReady") or not template_file.is_file():
             template_result = poll_template(session, base_url, str(state["templateTaskId"]), args.poll_seconds, args.timeout_seconds)
             result = next((item for item in template_result.get("results", []) if str(item.get("outputType", "")).lower() == "mp4"), None)
@@ -454,16 +498,25 @@ def main() -> int:
     assert target_audio is not None
 
     if not state.get("cloneRequestId"):
+        if state.get("cloneSubmissionPending"):
+            raise PipelineError("Fast clone submission outcome is unknown. Contact Lab support; do not resubmit or reset state.")
+        state["cloneSubmissionPending"] = True
+        save_state()
         print("Submitting fast digital-human clone", flush=True)
         with template_file.open("rb") as video:
             clone_submit = require_json(session.post(
                 f"{base_url}/api/avatar-forge/avatar/clone",
                 files={"video": (template_file.name, video, "video/mp4")},
-                data={"assetId": state["assetId"]},
+                data={"assetId": state["assetId"]} if state.get("assetId") else {},
                 timeout=300,
             ), "Fast clone submission")
         state["cloneRequestId"] = clone_submit["requestId"]
+        state["assetId"] = clone_submit.get("assetId") or state.get("assetId")
+        state.pop("cloneSubmissionPending", None)
         save_state()
+
+    if not state.get("assetId"):
+        raise PipelineError("Fast clone returned no assetId. Keep recovery state and contact Lab support; do not resubmit.")
 
     if not state.get("playerId"):
         clone_result = poll_digital(session, base_url, str(state["cloneRequestId"]), "Fast clone", args.poll_seconds, args.timeout_seconds)
@@ -472,10 +525,14 @@ def main() -> int:
             raise PipelineError("Fast clone returned no player_id")
         state["playerId"] = player_id
         save_state()
-    if template_file.exists():
+    if not args.video and template_file.exists():
         template_file.unlink()
 
     if not state.get("inferenceRequestId"):
+        if state.get("inferenceSubmissionPending"):
+            raise PipelineError("Zeroshot submission outcome is unknown. Contact Lab support; do not resubmit or reset state.")
+        state["inferenceSubmissionPending"] = True
+        save_state()
         print("Submitting zeroshot inference", flush=True)
         with target_audio.open("rb") as audio:
             infer_submit = require_json(session.post(
@@ -486,6 +543,7 @@ def main() -> int:
             ), "Zeroshot submission")
         state["inferenceId"] = infer_submit.get("inferenceId")
         state["inferenceRequestId"] = infer_submit["requestId"]
+        state.pop("inferenceSubmissionPending", None)
         save_state()
 
     infer_result = poll_digital(session, base_url, str(state["inferenceRequestId"]), "Zeroshot inference", args.poll_seconds, args.timeout_seconds)

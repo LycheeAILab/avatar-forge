@@ -53,7 +53,7 @@ def main() -> int:
             "sha256": sha256(DRIVER.read_bytes()).hexdigest() if DRIVER.is_file() else None,
         },
         "skill": {"ok": (ROOT / "SKILL.md").is_file()},
-        "version": {"ok": version == "2.2.0", "value": version, "required": "2.2.0"},
+        "version": {"ok": version == "2.3.0", "value": version, "required": "2.3.0"},
         "pluginVersion": {
             "ok": not PLUGIN_MANIFEST.is_file() or plugin_version == version,
             "value": plugin_version,

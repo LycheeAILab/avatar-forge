@@ -22,6 +22,8 @@ The template-driving audio is always the bundled `assets/template-driver.wav` (S
 
 ## Existing-input variants
 
+- Person MP4 (`--video`, mutually exclusive with `--image`): skip the entire internal-template stage and bundled driver; use the original authorized video for v2clone, persist the returned assetId and requestId, then use target speech for zeroshot. Preserve the source video. Source audio is not implicitly cloned or used as target speech. This is not a promise of frame-exact lip replacement.
+
 - Existing finished audio: skip LycheeTTS; create the internal template with the bundled fixed audio, fast-clone, then use the user's finished audio only for zeroshot.
 - Reference voice: clone once, persist the returned `speakerId` in recovery state, and continue automatically. Retry transient voice-readiness failures without resubmitting the clone.
 - Existing ready `assetId/playerId`: skip template and fast clone; submit audio directly to zeroshot.
@@ -40,6 +42,8 @@ The client stores hidden state under `.avatar-forge/<output-stem>/state.json` an
 - Saved `playerId`: skip clone.
 - Saved inference request: query it; do not call any earlier stage.
 - After fast clone succeeds, remove the transient local template.
+- Never delete the user's person video. Its hash and a video-mode discriminator participate in recovery validation; old image fingerprints remain compatible.
+- A clone/inference submission intent without a returned request ID is an unknown outcome: stop for support reconciliation, not an automatic retry. The client cannot recover an unreturned ID by inventing a query endpoint.
 
 Provider IDs are diagnostic state, not normal user-facing output.
 

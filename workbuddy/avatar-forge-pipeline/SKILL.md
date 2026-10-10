@@ -7,7 +7,7 @@ description: Create a final zeroshot talking-avatar video or prepare its script 
 
 ## Identify the installed release
 
-Read the adjacent `VERSION` file when asked which release is installed. Report that exact value instead of inferring a version from conversation history or documentation prose. This package is release `2.2.0`.
+Read the adjacent `VERSION` file when asked which release is installed. Report that exact value instead of inferring a version from conversation history or documentation prose. This package is release `2.3.0`.
 
 ## Keep the final-output contract
 
@@ -20,6 +20,8 @@ Return only the final MP4 produced by LycheeAILab zeroshot inference unless the 
 - Never resubmit a paid stage when a saved task can be resumed.
 
 ## Select the requested capability
+
+- Person video: authorized person MP4 + finished audio, or script + reference voice / `speaker_id` -> fast clone -> zeroshot. Use `--video` instead of `--image`; no RunningHub calls.
 
 - Complete: portrait + authorized reference voice or existing LycheeTTS `speaker_id` + script -> internal template -> target speech -> fast clone -> zeroshot MP4.
 - Avatar only: portrait + finished WAV/MP3 -> internal template -> fast clone -> zeroshot MP4.
@@ -66,6 +68,8 @@ Inspect the image when possible. Request a replacement if the face is unclear, o
 
 ## Prepare a script from video
 
+This section extracts spoken copy only. If the user wants to animate the person in the video, use the direct person-video workflow below, not a portrait extraction or transcription workflow.
+
 Read `references/video-recreation.md` first. For a local or uploaded video:
 
 The WorkBuddy package includes a cookie-free Douyin engine derived from the proven DouK request flow, with `yt-dlp` as a fallback. The installer installs `requirements.txt`; do not require a separate downloader project, browser cookies, Windows DPAPI, or a ChatGPT browser extension.
@@ -95,6 +99,8 @@ Keep `transcript-original.txt` unchanged and save the rewrite separately as `scr
 
 ## Preserve the fixed stage order
 
+The following template step applies only to images. Person-video mode skips it and sends the original MP4 to fast clone.
+
 1. Create the internal motion template from the portrait and bundled `assets/template-driver.wav`.
 2. Clone the authorized reference voice when needed and save the returned `requestId` as `speakerId`.
 3. Generate the formal target speech through the protected LycheeAILab LycheeTTS endpoint.
@@ -104,7 +110,17 @@ Keep `transcript-original.txt` unchanged and save the rewrite separately as `scr
 
 Never use the user's script, reference voice, target audio, or LycheeTTS output to drive the template stage. Never ask for provider keys; the local client sends only the user's Lab credential.
 
-## Resume instead of repeating
+## Person-video workflow
+
+Confirm authorization for the depicted person and target voice. Prefer a single clear, unobstructed face without cuts; do not promise exact preservation of source actions/scenes. Require a readable MP4 up to 100 MiB, 120 seconds, 1080p (long edge ≤1920 / short edge ≤1080), 25fps and FFprobe. Preserve the user's source file; never treat it as a disposable internal template or send it to RunningHub.
+
+```powershell
+python "${CODEBUDDY_SKILL_DIR}/scripts/run_pipeline.py" --video "C:/absolute/person.mp4" --avatar-only --audio "C:/absolute/speech.mp3" --output "C:/absolute/result.mp4"
+```
+
+For generated speech replace `--avatar-only --audio ...` with `--script-file ... --voice ...` or `--script-file ... --speaker-id ...`. Original video audio is not implicitly a voice reference. Persist `assetId`, clone and inference IDs, and `playerId`; reuse the last two asset/player values with `--infer-only` for future scripts. Lab limits final output to 300 seconds; direct long-video requests to https://lab.lycheeai.com.cn/ customer support, never silently trim.
+
+## Recovery rules
 
 - Re-run the identical command and output path to resume from `.avatar-forge/<output-stem>/state.json`.
 - A timeout is not a failure. Poll the saved template, clone, or inference request.

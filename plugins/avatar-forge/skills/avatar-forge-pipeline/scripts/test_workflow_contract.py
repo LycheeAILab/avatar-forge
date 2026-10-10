@@ -65,6 +65,6 @@ require(DOUK_HELPER.is_file(), "Cookie-free Douyin helper is missing")
 require(DOUK_LICENSE.is_file() and "GNU GENERAL PUBLIC LICENSE" in DOUK_LICENSE.read_text(encoding="utf-8"), "DouK GPL license is missing")
 require("download_with_douk_direct" in VIDEO_SOURCE.read_text(encoding="utf-8"), "DouK direct downloader is not the primary engine")
 require("cookiesfrombrowser" not in VIDEO_SOURCE.read_text(encoding="utf-8"), "Browser-cookie extraction must not be used")
-require(VERSION.read_text(encoding="utf-8").strip() == "2.2.0", "Skill release marker is missing or stale")
+require(VERSION.read_text(encoding="utf-8").strip() == "2.3.0", "Skill release marker is missing or stale")
 
 print("Avatar Forge contract OK: fixed driver -> LycheeTTS through Lab -> v2clone -> zeroshot; only zeroshot MP4 is delivered.")

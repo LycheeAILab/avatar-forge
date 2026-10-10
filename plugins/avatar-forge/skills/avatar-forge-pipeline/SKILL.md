@@ -7,7 +7,7 @@ description: Create a final zeroshot talking-avatar video or prepare its script 
 
 ## Identify the installed release
 
-When asked about the installed or latest available capability, read the adjacent `VERSION` file and report that exact value. Do not infer a version from conversation history, README prose, authentication state, or an older standalone Skill. This package is release `2.2.0`.
+When asked about the installed or latest available capability, read the adjacent `VERSION` file and report that exact value. Do not infer a version from conversation history, README prose, authentication state, or an older standalone Skill. This package is release `2.3.0`.
 
 If both this plugin Skill and a legacy standalone `~/.codex/skills/avatar-forge-pipeline` are present, stop and explain the name collision. Preserve the legacy directory as a timestamped backup outside the active `skills` directory, then start a new Codex task before validating capabilities.
 
@@ -23,6 +23,8 @@ Return only the final MP4 produced by LycheeAILab zeroshot inference unless the 
 - Delete the local internal template after fast clone succeeds.
 
 ## Choose a capability
+
+- Person video: authorized person MP4 + finished WAV/MP3, or script + reference voice / `speaker_id` → fast clone → zeroshot MP4. Use `--video` instead of `--image`; skip RunningHub entirely.
 
 - Complete: portrait + authorized reference voice or existing LycheeTTS `speaker_id` + script → internal template → target speech → fast clone → zeroshot MP4.
 - Avatar only: portrait + finished WAV/MP3 → internal template → fast clone → zeroshot MP4.
@@ -62,6 +64,8 @@ Inspect the image when possible. Reject or request a replacement when facial fea
 
 ## Prepare a script from video
 
+For **using the person in a video**, do not transcribe it or extract a portrait for RunningHub. Read the person-video instructions below. This section is only for extracting/reworking spoken copy.
+
 Read [references/video-recreation.md](references/video-recreation.md) before downloading, transcribing, or rewriting a reference video.
 
 The Skill includes a cookie-free Douyin engine derived from the user's proven DouK request flow, with `yt-dlp` as a fallback. If `python scripts/doctor.py` reports dependencies missing, install `requirements.txt` automatically before continuing. Never require the user to install a separate downloader, export browser cookies, use Edge/Chrome DPAPI, or install a ChatGPT browser extension.
@@ -91,7 +95,7 @@ python scripts/transcribe_video.py input/reference.mp4 --output output/transcrip
 
 Rewrite the transcript as a new spoken script and save it separately as `script-rewritten.txt`. Preserve the original transcript, factual meaning, names, and numbers; change structure, hook, pacing, transitions, and conclusion rather than only replacing synonyms. Never fabricate claims. Ask for the desired platform, duration, audience, tone, or call to action only when those cannot be reasonably inferred.
 
-The internal order is fixed:
+The image workflow's internal order is fixed (person-video mode skips step 1 and uses the uploaded MP4 in step 3):
 
 1. Use the portrait and bundled fixed short audio to create one internal motion template.
 2. If only a reference voice is supplied, clone it once through Lab, save the returned `requestId` as `speakerId`, then use the protected Lab voice endpoint to generate target speech. Retry transient “voice preparing” responses with bounded backoff. The client must send only the user's Lab bearer token; the LycheeTTS API Key remains encrypted in the Lab database.
@@ -109,7 +113,19 @@ The clone response may contain only `requestId`. LycheeTTS accepts that identifi
 
 RunningHub is allowed only behind step 1. Steps 3 and 4 must use the LycheeAILab digital-human platform.
 
-## Resume safely
+## Use a person video directly
+
+Confirm authorization to use the depicted person's likeness and target voice. Inspect the video: prefer one continuously visible person, a clear unobstructed face, and no scene cuts. Request a replacement if the subject is ambiguous or unsuitable. This fast-clone + zeroshot path does not guarantee exact preservation of the source's movements, duration, or every scene.
+
+Use a readable MP4 (at most 100 MiB, 120 seconds, 1080p (long edge ≤1920 / short edge ≤1080), 25fps, FFprobe required). Do not silently transcode, trim, replace it with a photo, or route through RunningHub. Source video is clone material; its original audio is not automatically the target speech or a voice-cloning reference.
+
+```powershell
+python scripts/run_pipeline.py --video input/person.mp4 --avatar-only --audio input/speech.mp3 --output output/avatar-zeroshot.mp4
+```
+
+For script-driven speech, replace `--avatar-only --audio ...` with `--script-file input/script.txt --voice input/reference.wav` (or `--speaker-id ...`). The source video is preserved. Reuse saved `assetId`/`playerId` with `--infer-only` for later speech changes. Final speech/video is limited to 300 seconds by Lab; if exceeded, explain the maximum and direct long-video requests to https://lab.lycheeai.com.cn/ customer support. Never truncate silently.
+
+## Recovery rules
 
 - Re-run the same command with the same `--output`; the hidden `.avatar-forge/<output-stem>/state.json` resumes saved stages.
 - Do not use `--reset-state` after a timeout unless the user explicitly authorizes a new paid workflow.

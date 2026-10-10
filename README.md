@@ -10,7 +10,7 @@
   选择公模快速开拍，或用一张照片和一段声音创建专属数字人。<br />
   从参考视频提炼新文案，再与 HyperFrames 或 ChatCut 组合成完整口播作品。
 
-  [![Version](https://img.shields.io/badge/version-2.2.0-7257E8?style=for-the-badge)](https://github.com/LycheeAILab/avatar-forge/releases/tag/v2.2.0)
+  [![Version](https://img.shields.io/badge/version-2.3.0-7257E8?style=for-the-badge)](https://github.com/LycheeAILab/avatar-forge/releases/tag/v2.3.0)
   [![Codex Plugin](https://img.shields.io/badge/Codex-Plugin-111827?style=for-the-badge)](#-安装)
   [![WorkBuddy Skill](https://img.shields.io/badge/WorkBuddy-Skill-2563EB?style=for-the-badge)](#workbuddy)
   [![License: MIT](https://img.shields.io/badge/License-MIT-16A34A?style=for-the-badge)](LICENSE)
@@ -26,7 +26,7 @@
 
 [百度网盘下载 · 1.0.3 · Windows x64](https://pan.baidu.com/s/1_WCgfPzlkzaV0xyBAtl7Fw?pwd=7zty) · 提取码：`7zty`
 
-使用 Lab 账号登录，在音色管理中上传参考音频克隆新音色，管理可复用的数字人和音色，输入口播稿制作并导出成片。桌面端独立版本为 1.0.3，Skill 版本保持 2.2.0。左下角更新面板显示下载进度，完成后可重启安装。当前 Windows 安装包尚未进行代码签名。
+使用 Lab 账号登录，在音色管理中上传参考音频克隆新音色，管理可复用的数字人和音色，输入口播稿制作并导出成片。桌面端独立版本为 1.0.3，Skill 版本保持 2.3.0。左下角更新面板显示下载进度，完成后可重启安装。当前 Windows 安装包尚未进行代码签名。
 
 ## ✨ 核心能力
 
@@ -109,13 +109,23 @@ codex plugin add avatar-forge@avatar-forge
 
 在 WorkBuddy 中发送：
 
-> 阅读 https://raw.githubusercontent.com/LycheeAILab/avatar-forge/v2.2.0/WORKBUDDY_INSTALL.md，帮我安装 Avatar Forge 2.2.0；安装后只运行本地 doctor，不要提交任何生成任务。
+> 阅读 https://raw.githubusercontent.com/LycheeAILab/avatar-forge/v2.3.0/WORKBUDDY_INSTALL.md，帮我安装 Avatar Forge 2.3.0；安装后只运行本地 doctor，不要提交任何生成任务。
 
-也可以从 [Avatar Forge 2.2.0 Release](https://github.com/LycheeAILab/avatar-forge/releases/tag/v2.2.0) 下载 `avatar-forge-workbuddy-2.2.0.zip`，然后在 WorkBuddy 的 Skills 页面上传。
+也可以从 [Avatar Forge 2.3.0 Release](https://github.com/LycheeAILab/avatar-forge/releases/tag/v2.3.0) 下载 `avatar-forge-workbuddy-2.3.0.zip`，然后在 WorkBuddy 的 Skills 页面上传。
 
 ## ✅ 素材建议
 
-### 人物图片
+### 人物视频
+
+支持用已授权的人物 MP4 直接快速克隆，再用目标音频生成 zeroshot 口播，无需图片生成模板。也可以提供文案和参考声音／已有音色自动合成目标音频。原视频保留；建议单人、脸部清楚、无遮挡、无切镜。不保证逐帧保持原视频动作和场景。
+
+```bash
+python scripts/run_pipeline.py --video person.mp4 --avatar-only --audio speech.mp3 --output result.mp4
+```
+
+命令在 Skill 目录执行。MP4 最多 100 MB、2 分钟、25fps，分辨率最高 1080p（长边≤1920、短边≤1080），需 FFprobe。超限直接提示，不自动截断；最终口播最多 5 分钟。后续更换文案可复用已克隆人物，不必重复克隆。
+
+### 图片要求
 
 > [!IMPORTANT]
 > 请确认人物脸部清晰、没有遮挡、完整露出，且人物在画面中的比例适中。模糊、遮脸、面部超出画面或人物过大/过小都会影响生成效果。
